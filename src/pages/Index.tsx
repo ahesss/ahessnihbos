@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shuffle, Trash2, ClipboardCopy, Play, CheckCircle2, ShieldCheck, User } from "lucide-react";
+import { Shuffle, Trash2, ClipboardCopy, Play, CheckCircle2, ShieldCheck, User, Bot, Globe } from "lucide-react";
 import { toast } from "sonner";
 
 declare global {
@@ -58,12 +58,22 @@ const Index = () => {
     const [accounts, setAccounts] = useState<AccountEntry[]>([]);
     const [bulkInput, setBulkInput] = useState("");
     const [logs, setLogs] = useState<string[]>([]);
+    const [serverIp, setServerIp] = useState("Loading IP...");
 
     useEffect(() => {
         setSavedGmail(localStorage.getItem('xt_saved_gmail') || '');
         setPasswordXT(localStorage.getItem('xt_saved_pass') || 'Dicoba@11');
         setReferralCode(localStorage.getItem('xt_saved_ref') || '');
         setAppPassword(localStorage.getItem('xt_saved_app') || '');
+
+        // Fetch Server IP
+        fetch('/api/ip')
+            .then(res => res.json())
+            .then(data => {
+                if (data.ok && data.ip) setServerIp(data.ip);
+                else setServerIp("Unknown IP");
+            })
+            .catch(() => setServerIp("Error loading IP"));
     }, []);
 
     const addLog = (msg: string) => {
@@ -183,10 +193,10 @@ const Index = () => {
                     let customHeadersObj: any = {};
 
                     // Fetch auto-generated headers from backend
-                    addLog(`[${acc.email}] 🔑 Generating unique device headers...`);
+                    addLog(`[${acc.email}] ðŸ”‘ Generating unique device headers...`);
                     const genRes = await fetch('/api/generate-device-headers');
                     customHeadersObj = await genRes.json();
-                    addLog(`[${acc.email}] ✅ Device identity generated. Waiting 3s...`);
+                    addLog(`[${acc.email}] âœ… Device identity generated. Waiting 3s...`);
                     await new Promise(r => setTimeout(r, 3000)); // Initial pause
 
                     // 2. Validate Captcha
@@ -204,11 +214,11 @@ const Index = () => {
                     let capData = await capRes.json();
                     if (!capData.ok || !capData.certificate) throw new Error(capData.msg || "Gagal validasi captcha");
 
-                    addLog(`[${acc.email}] ✅ Captcha validated. pausing 8s for security...`);
+                    addLog(`[${acc.email}] âœ… Captcha validated. pausing 8s for security...`);
                     await new Promise(r => setTimeout(r, 8000)); // Large human pause
 
                     // 3. Send OTP
-                    addLog(`[${acc.email}] 🔥 Sending OTP code...`);
+                    addLog(`[${acc.email}] ðŸ”¥ Sending OTP code...`);
                     updateAccount(id, { status: 'registering', message: 'Mengirim OTP...' });
                     let sendRes = await fetch('/api/send-otp', {
                         method: 'POST',
@@ -222,7 +232,7 @@ const Index = () => {
                     });
                     let sendData = await sendRes.json();
                     if (!sendData.ok) throw new Error(sendData.msg || "Gagal kirim OTP");
-                    addLog(`[${acc.email}] 📨 OTP sent! Cooling down 10s before search...`);
+                    addLog(`[${acc.email}] ðŸ“¨ OTP sent! Cooling down 10s before search...`);
                     await new Promise(r => setTimeout(r, 10000)); // Wait for email delivery
 
                     // 4. Poll for OTP (Max 60s)
@@ -230,7 +240,7 @@ const Index = () => {
                     let otpFound: string | null = null;
                     const startTime = Date.now();
                     while (!otpFound && (Date.now() - startTime) < 90000) { // Extended timeout
-                        addLog(`[${acc.email}] 🔍 Searching for OTP...`);
+                        addLog(`[${acc.email}] ðŸ” Searching for OTP...`);
                         let pollRes = await fetch('/api/fetch-otp', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -239,7 +249,7 @@ const Index = () => {
                         let pollData = await pollRes.json();
                         if (pollData.ok && pollData.otp) {
                             otpFound = pollData.otp;
-                            addLog(`[${acc.email}] 🔥 OTP Found: ${otpFound}. pausing 5s...`);
+                            addLog(`[${acc.email}] ðŸ”¥ OTP Found: ${otpFound}. pausing 5s...`);
                             await new Promise(r => setTimeout(r, 5000)); // Final pause before register
                             break;
                         }
@@ -249,7 +259,7 @@ const Index = () => {
                     if (!otpFound) throw new Error("OTP tidak masuk ke Gmail (Timeout 60s)");
 
                     // 5. Complete Register
-                    addLog(`[${acc.email}] 🚀 Registering account...`);
+                    addLog(`[${acc.email}] ðŸš€ Registering account...`);
                     updateAccount(id, { status: 'registering', message: 'Selesaikan pendaftaran...' });
                     let finalRes = await fetch('/api/complete-register', {
                         method: 'POST',
@@ -271,7 +281,7 @@ const Index = () => {
                             message: `Registered! ID: ${finalData.userId}`,
                             userId: finalData.userId
                         });
-                        addLog(`[${acc.email}] ✅ SUCCESS! Account registered & Event joined.`);
+                        addLog(`[${acc.email}] âœ… SUCCESS! Account registered & Event joined.`);
                         toast.success(`${acc.email} terdaftar!`);
                     } else {
                         throw new Error(finalData.msg || "Gagal pendaftaran akhir");
@@ -308,9 +318,17 @@ const Index = () => {
     return (
         <div className="min-h-screen bg-[#0f0f10] text-[#ececec] p-4 max-w-lg mx-auto pb-24 font-inter text-sm">
             {/* Header */}
-            <div className="flex items-center gap-2 mb-6 p-2 border-b border-[#2c2c2f] pb-4">
-                <Shuffle className="w-5 h-5 text-green-500" />
-                <h1 className="text-[15px] font-bold text-white tracking-wide">Gmail Dot Trick Generator</h1>
+            <div className="flex items-center justify-between mb-6 p-2 border-b border-[#2c2c2f] pb-4">
+                <div className="flex items-center gap-2">
+                    <Bot className="w-6 h-6 text-green-500" />
+                    <h1 className="text-[16px] font-bold text-[#888] tracking-wide">
+                        ahess nih boss <span className="text-white text-[15px]">v3.0</span>
+                    </h1>
+                </div>
+                <div className="flex items-center gap-1.5 bg-[#17171a] border border-[#2c2c2f] rounded-full px-3 py-1">
+                    <Globe className="w-3.5 h-3.5 text-green-500" />
+                    <span className="text-[12px] font-mono text-[#aaa]">{serverIp}</span>
+                </div>
             </div>
 
             {/* Saved Gmail */}
@@ -352,7 +370,7 @@ const Index = () => {
                         type="password"
                         value={appPassword}
                         onChange={(e) => setAppPassword(e.target.value)}
-                        placeholder="••••••••••••••••"
+                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                         className="bg-[#121214] border-[#2c2c2f] text-white focus-visible:ring-1 focus-visible:ring-green-500 focus-visible:border-green-500 h-10 font-mono tracking-widest text-lg"
                         onBlur={handleSaveGmail}
                     />
@@ -398,7 +416,7 @@ const Index = () => {
                 <div className="flex justify-between items-center text-xs pt-1">
                     <p>
                         <span className="text-green-500 font-bold">{availableCount} tersedia</span>
-                        <span className="text-[#666]"> • {totalGeneratedEmail} di antrian</span>
+                        <span className="text-[#666]"> â€¢ {totalGeneratedEmail} di antrian</span>
                     </p>
                     <button onClick={handleResetHistory} className="text-[#777] underline hover:text-white transition-colors">
                         Reset history
@@ -426,7 +444,7 @@ const Index = () => {
 
             {/* Account List */}
             <div className="mb-6">
-                <h3 className="text-xs font-bold text-[#888] mb-3 uppercase tracking-wider">{accounts.length} akun — {pendingCount} pending</h3>
+                <h3 className="text-xs font-bold text-[#888] mb-3 uppercase tracking-wider">{accounts.length} akun â€” {pendingCount} pending</h3>
                 <div className="flex flex-col gap-3">
                     {accounts.map((acc, i) => (
                         <div key={acc.id} className={`p-3 rounded-lg border relative overflow-hidden flex flex-col gap-2 transition-all ${acc.status === 'success' ? 'bg-[#1a2e1d] border-green-500/40' :
@@ -484,7 +502,7 @@ const Index = () => {
                     {logs.slice().reverse().map((log, i) => (
                         <div key={i} className={`whitespace-pre-wrap mb-1 ${log.includes('[SUCCESS]') ? 'text-green-400' : log.includes('[ERROR]') ? 'text-red-400' : ''}`}>{log}</div>
                     ))}
-                    {logs.length === 0 && <span>≥ Logs ready (menunggu eksekusi)</span>}
+                    {logs.length === 0 && <span>â‰¥ Logs ready (menunggu eksekusi)</span>}
                 </div>
             </div>
         </div>
