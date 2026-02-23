@@ -297,7 +297,13 @@ app.post('/api/complete-register', async function (req, res) {
         // Save to file
         fs.appendFileSync(ACCOUNTS_FILE, `${email}|${password}|${userId}|${refCode}|${new Date().toISOString()}|${token}\n`);
 
-        res.json({ ok: true, userId: userId, token: token, msg: 'Berhasil mendaftar!' });
+        // E. Activity: Apply (Join Event)
+        await xtFetch('/acapi/general/activity/apply/999999999999991', {
+            token: token,
+            customHeaders: customHeaders
+        });
+
+        res.json({ ok: true, userId: userId, token: token, msg: 'Berhasil mendaftar & Join Event!' });
 
     } catch (err) {
         res.status(500).json({ ok: false, msg: err.message });
