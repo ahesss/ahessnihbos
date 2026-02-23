@@ -212,7 +212,7 @@ app.post('/api/send-otp', async function (req, res) {
             customHeaders: customHeaders,
             userAgent: userAgent
         });
-        if (sendOtpData._httpStatus === 200 || xtSuccess(sendOtpData)) {
+        if (xtSuccess(sendOtpData)) {
             res.json({ ok: true, msg: 'OTP sent' });
         } else {
             res.status(400).json({ ok: false, msg: xtMsg(sendOtpData) });
@@ -243,7 +243,17 @@ app.post('/api/fetch-otp', async function (req, res) {
         await client.mailboxOpen('INBOX');
 
         let msgs = await client.search({
-            since: new Date(Date.now() - 10 * 60 * 1000) // Broader search for last 10 mins
+            since: new Date(Date.now() - 10 * 60 * 1000), // Broader search for last 10 mins
+            or: [
+                { from: 'xt.com' },
+                { from: 'xtpro' },
+                { from: 'no-reply' },
+                { from: 'noreply' },
+                { subject: 'verification' },
+                { subject: 'verify' },
+                { subject: 'code' },
+                { subject: 'XT' }
+            ]
         });
 
         if (msgs.length > 0) {
