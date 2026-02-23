@@ -342,6 +342,17 @@ app.post('/api/complete-register', async function (req, res) {
     }
 });
 
+// 6. Get Server Public IP
+app.get('/api/ip', async (req, res) => {
+    try {
+        const ipRes = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipRes.json();
+        res.json({ ok: true, ip: ipData.ip });
+    } catch (err) {
+        res.status(500).json({ ok: false, msg: 'Gagal mendapatkan IP server' });
+    }
+});
+
 // Catch-all route to serve React app for non-API requests
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
