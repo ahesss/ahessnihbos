@@ -60,6 +60,7 @@ const Index = () => {
     const [accounts, setAccounts] = useState<AccountEntry[]>([]);
     const [bulkInput, setBulkInput] = useState("");
     const [logs, setLogs] = useState<string[]>([]);
+    const [rawHeaders, setRawHeaders] = useState('');
 
     useEffect(() => {
         setSavedGmail(localStorage.getItem('xt_saved_gmail') || '');
@@ -193,6 +194,17 @@ const Index = () => {
                     }
 
                     // 2. Register Process
+                    const headerLines = rawHeaders.split('\n');
+                    const customHeadersObj: any = {};
+                    headerLines.forEach(line => {
+                        const idx = line.indexOf(':');
+                        if (idx > 0) {
+                            const key = line.substring(0, idx).trim();
+                            const val = line.substring(idx + 1).trim();
+                            if (key && val) customHeadersObj[key] = val;
+                        }
+                    });
+
                     let regRes = await fetch('/api/register-process', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -202,7 +214,8 @@ const Index = () => {
                             appPassword: acc.appPassword,
                             refCode: acc.referralCode,
                             certificate: capData.certificate,
-                            autoBind: autoBind2FA
+                            autoBind: autoBind2FA,
+                            customHeaders: customHeadersObj
                         })
                     });
                     let regData = await regRes.json();
@@ -296,6 +309,17 @@ const Index = () => {
                         onChange={(e) => setAppPassword(e.target.value)}
                         placeholder="••••••••••••••••"
                         className="bg-[#121214] border-[#2c2c2f] text-white focus-visible:ring-1 focus-visible:ring-green-500 focus-visible:border-green-500 h-10 font-mono tracking-widest text-lg"
+                        onBlur={handleSaveGmail}
+                    />
+                </div>
+
+                <div>
+                    <label className="text-xs mb-1.5 block text-[#999] font-medium">Raw Headers (Bypass WAF/Anti-Bot)</label>
+                    <Textarea
+                        value={rawHeaders}
+                        onChange={(e) => setRawHeaders(e.target.value)}
+                        placeholder="Paste headers dari Inspect Element Network tab di sini (seperti file header.txt)"
+                        className="w-full bg-[#121214] border border-[#2c2c2f] text-white rounded-md p-2 text-xs font-mono min-h-[80px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-green-500"
                         onBlur={handleSaveGmail}
                     />
                 </div>
