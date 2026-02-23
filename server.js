@@ -48,11 +48,10 @@ function browserHeaders(token, customHeaders = {}, isMinimal = false, hasBody = 
     let h = {};
 
     if (isMinimal) {
+        // Python-like minimal headers
         h = {
             'User-Agent': finalUA,
-            'Accept': 'application/json, text/plain, */*',
-            'Origin': 'https://www.xtpro.online',
-            'Referer': 'https://www.xtpro.online/en'
+            'Accept': 'application/json, text/plain, */*'
         };
         if (hasBody) h['Content-Type'] = 'application/json';
     } else {
@@ -120,7 +119,7 @@ async function xtFetch(urlPath, opts) {
         console.log(`[API RESP] ${urlPath} status=${res.status}`);
 
         if (res.status !== 200) {
-            console.log(`[API FAIL BODY] ${urlPath}: ${text.substring(0, 1000)}`);
+            console.log(`[API FAIL BODY] ${urlPath}: ${text}`);
         }
 
         try {
