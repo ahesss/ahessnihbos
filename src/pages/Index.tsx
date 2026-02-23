@@ -187,6 +187,7 @@ const Index = () => {
                     const genRes = await fetch('/api/generate-device-headers');
                     customHeadersObj = await genRes.json();
                     addLog(`[${acc.email}] ✅ Device identity generated.`);
+                    await new Promise(r => setTimeout(r, 1000)); // Small pause
 
                     // 2. Validate Captcha
                     addLog(`[${acc.email}] Validating captcha...`);
@@ -203,6 +204,9 @@ const Index = () => {
                     let capData = await capRes.json();
                     if (!capData.ok || !capData.certificate) throw new Error(capData.msg || "Gagal validasi captcha");
 
+                    addLog(`[${acc.email}] ✅ Captcha validated. Waiting a moment...`);
+                    await new Promise(r => setTimeout(r, 2000)); // Human pause
+
                     // 3. Send OTP
                     addLog(`[${acc.email}] 🔥 Sending OTP code...`);
                     updateAccount(id, { status: 'registering', message: 'Mengirim OTP...' });
@@ -218,7 +222,8 @@ const Index = () => {
                     });
                     let sendData = await sendRes.json();
                     if (!sendData.ok) throw new Error(sendData.msg || "Gagal kirim OTP");
-                    addLog(`[${acc.email}] 📨 OTP sent! Waiting for email...`);
+                    addLog(`[${acc.email}] 📨 OTP sent! Cooling down before search...`);
+                    await new Promise(r => setTimeout(r, 3000)); // Wait for email delivery
 
                     // 4. Poll for OTP (Max 60s)
                     updateAccount(id, { status: 'registering', message: 'Mencari OTP di Gmail...' });
@@ -235,6 +240,7 @@ const Index = () => {
                         if (pollData.ok && pollData.otp) {
                             otpFound = pollData.otp;
                             addLog(`[${acc.email}] 🔥 OTP Found: ${otpFound}`);
+                            await new Promise(r => setTimeout(r, 1500)); // Final pause before register
                             break;
                         }
                         await new Promise(r => setTimeout(r, 6000)); // Poll every 6s
