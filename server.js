@@ -42,11 +42,16 @@ function generateDeviceHeaders() {
     };
 }
 
-function browserHeaders(token, customHeaders = {}, isMinimal = false, hasBody = true) {
+function browserHeaders(token, customHeaders = {}, isMinimal = false, hasBody = true, userAgent = null) {
+    const defaultUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+    const finalUA = userAgent || defaultUA;
+
     if (isMinimal) {
         let mh = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-            'Accept': 'application/json, text/plain, */*'
+            'User-Agent': finalUA,
+            'Accept': 'application/json, text/plain, */*',
+            'Origin': 'https://www.xtpro.online',
+            'Referer': 'https://www.xtpro.online/en'
         };
         if (hasBody) mh['Content-Type'] = 'application/json';
         return mh;
@@ -54,7 +59,7 @@ function browserHeaders(token, customHeaders = {}, isMinimal = false, hasBody = 
 
     // Default headers for Registration
     let h = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        'User-Agent': finalUA,
         'Accept': 'application/json, text/plain, */*',
         'Content-Type': 'application/json',
         'api-version': '4',
@@ -90,6 +95,7 @@ async function xtFetch(urlPath, opts) {
     var method = opts.method || 'POST';
     var customHeaders = opts.customHeaders || {};
     var isMinimal = opts.isMinimal || false;
+    var userAgent = opts.userAgent || null;
 
     // Override api-version per Python script logic
     if (urlPath.includes('/acapi/')) {
@@ -97,7 +103,7 @@ async function xtFetch(urlPath, opts) {
         customHeaders['xt-host'] = 'www.xtpro.online';
     }
 
-    var headers = browserHeaders(token, customHeaders, isMinimal, !!body);
+    var headers = browserHeaders(token, customHeaders, isMinimal, !!body, userAgent);
     var url = 'https://www.xtpro.online' + urlPath;
     if (query) {
         var qs = new URLSearchParams(query).toString();
@@ -112,6 +118,10 @@ async function xtFetch(urlPath, opts) {
         var res = await fetch(url, fetchOpts);
         var text = await res.text();
         console.log(`[API RESP] ${urlPath} status=${res.status}`);
+
+        if (res.status !== 200) {
+            console.log(`[API FAIL BODY] ${urlPath}: ${text.substring(0, 1000)}`);
+        }
 
         try {
             var json = JSON.parse(text);
@@ -155,11 +165,13 @@ app.get('/api/generate-device-headers', function (req, res) {
 // 2. Validate Captcha (Manual)
 app.post('/api/validate-captcha', async function (req, res) {
     var captchaResult = req.body.captchaResult;
-    var customHeaders = req.body.customHeaders || {};
+    var userAgent = req.body.userAgent || null;
     if (!captchaResult) return res.status(400).json({ ok: false, msg: 'captchaResult wajib' });
 
     try {
+        // Match Python nomenclature exactly
         var solution = {
+            captchaId: 'f6cb1abffdcdf0b30659fd3bb4c0e929',
             captcha_id: 'f6cb1abffdcdf0b30659fd3bb4c0e929',
             lot_number: captchaResult.lot_number,
             captcha_output: captchaResult.captcha_output,
@@ -170,7 +182,8 @@ app.post('/api/validate-captcha', async function (req, res) {
         var data = await xtFetch('/xt-app/public/captcha/validate', {
             query: { data: JSON.stringify(solution), type: '2' },
             method: 'POST',
-            isMinimal: true
+            isMinimal: true,
+            userAgent: userAgent
         });
 
         var certificate = data?.data?.certificate;
@@ -189,6 +202,7 @@ app.post('/api/send-otp', async function (req, res) {
     var email = req.body.email;
     var certificate = req.body.certificate;
     var customHeaders = req.body.customHeaders || {};
+    var userAgent = req.body.userAgent || null;
 
     if (!email || !certificate) return res.status(400).json({ ok: false, msg: 'Email & Certificate wajib' });
 
@@ -197,7 +211,8 @@ app.post('/api/send-otp', async function (req, res) {
             query: { codeType: '101' },
             body: { codeType: '101', receiveAddress: email.trim(), puzzleValidateString: certificate, regChannel: 'xt' },
             isMinimal: true,
-            customHeaders: customHeaders // Pass identity even if minimal
+            customHeaders: customHeaders,
+            userAgent: userAgent
         });
         if (sendOtpData._httpStatus === 200 || xtSuccess(sendOtpData)) {
             res.json({ ok: true, msg: 'OTP sent' });
@@ -268,6 +283,7 @@ app.post('/api/complete-register', async function (req, res) {
     var otp = req.body.otp;
     var refCode = req.body.refCode || 'AKNSZM';
     var customHeaders = req.body.customHeaders || {};
+    var userAgent = req.body.userAgent || null;
 
     if (!email || !password || !otp) return res.status(400).json({ ok: false, msg: 'Data tidak lengkap' });
 
@@ -275,7 +291,8 @@ app.post('/api/complete-register', async function (req, res) {
         // C. Get Public Key & Encrypt
         let keyData = await xtFetch('/uaapi/uaa/authorize/passwd/publicKey', {
             method: 'POST',
-            isMinimal: true
+            isMinimal: true,
+            userAgent: userAgent
         });
         if (!keyData?.data?.publicKey) throw new Error("Gagal mengambil public key");
         let loginPwd = rsaEncrypt(password, keyData.data.publicKey);
@@ -286,7 +303,8 @@ app.post('/api/complete-register', async function (req, res) {
                 userName: email.trim(), countryCode: '', dynamicCode: otp.trim(),
                 loginPwd: loginPwd, passwdId: keyData.data.passwdId, recommendCode: refCode.trim(), regChannel: 'xt'
             },
-            customHeaders: customHeaders
+            customHeaders: customHeaders,
+            userAgent: userAgent
         });
 
         if (!xtSuccess(regData)) throw new Error("Gagal mendaftar: " + xtMsg(regData));
