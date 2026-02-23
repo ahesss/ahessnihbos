@@ -42,8 +42,16 @@ function generateDeviceHeaders() {
     };
 }
 
-function browserHeaders(token, customHeaders = {}) {
-    // Default minimal headers
+function browserHeaders(token, customHeaders = {}, isMinimal = false) {
+    if (isMinimal) {
+        return {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/plain, */*',
+            'Content-Type': 'application/json'
+        };
+    }
+
+    // Default headers for Registration/Activities
     let h = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
         'Accept': 'application/json, text/plain, */*',
@@ -59,7 +67,7 @@ function browserHeaders(token, customHeaders = {}) {
         'priority': 'u=1, i'
     };
 
-    // Merge custom headers if provided (manual paste or auto-generated from frontend)
+    // Merge custom headers (manual or auto-generated)
     if (customHeaders && Object.keys(customHeaders).length > 0) {
         for (const [key, value] of Object.entries(customHeaders)) {
             if (value) h[key] = value;
@@ -80,13 +88,14 @@ async function xtFetch(urlPath, opts) {
     var token = opts.token || null;
     var method = opts.method || 'POST';
     var customHeaders = opts.customHeaders || {};
+    var isMinimal = opts.isMinimal || false;
 
-    // override certain endpoints api-version based on python script logic
+    // Override api-version per Python script logic
     if (urlPath.includes('/acapi/')) {
         customHeaders['api-version'] = '2';
     }
 
-    var headers = browserHeaders(token, customHeaders);
+    var headers = browserHeaders(token, customHeaders, isMinimal);
     var url = 'https://www.xtpro.online' + urlPath;
     if (query) {
         var qs = new URLSearchParams(query).toString();
@@ -159,7 +168,7 @@ app.post('/api/validate-captcha', async function (req, res) {
         var data = await xtFetch('/xt-app/public/captcha/validate', {
             query: { data: JSON.stringify(solution), type: '2' },
             method: 'POST',
-            customHeaders: customHeaders
+            isMinimal: true
         });
 
         var certificate = data?.data?.certificate;
@@ -185,7 +194,7 @@ app.post('/api/send-otp', async function (req, res) {
         let sendOtpData = await xtFetch('/uaapi/user/msg/doSendCode', {
             query: { codeType: '101' },
             body: { codeType: '101', receiveAddress: email.trim(), puzzleValidateString: certificate, regChannel: 'xt' },
-            customHeaders: customHeaders
+            isMinimal: true
         });
         if (sendOtpData._httpStatus === 200 || xtSuccess(sendOtpData)) {
             res.json({ ok: true, msg: 'OTP sent' });
@@ -258,7 +267,10 @@ app.post('/api/complete-register', async function (req, res) {
 
     try {
         // C. Get Public Key & Encrypt
-        let keyData = await xtFetch('/uaapi/uaa/authorize/passwd/publicKey', { method: 'POST', customHeaders: customHeaders });
+        let keyData = await xtFetch('/uaapi/uaa/authorize/passwd/publicKey', {
+            method: 'POST',
+            isMinimal: true
+        });
         if (!keyData?.data?.publicKey) throw new Error("Gagal mengambil public key");
         let loginPwd = rsaEncrypt(password, keyData.data.publicKey);
 
