@@ -181,9 +181,9 @@ const Index = () => {
                 updateAccount(id, { status: 'registering', message: 'Loading OTP & Registering...' });
 
                 try {
-                    // 1. Validate Captcha
+                    // 1. Prepare Headers (Auto or Manual)
+                    let customHeadersObj: any = {};
                     const headerLines = rawHeaders ? rawHeaders.split('\n') : [];
-                    const customHeadersObj: any = {};
                     if (headerLines.length > 0) {
                         headerLines.forEach(line => {
                             const idx = line.indexOf(':');
@@ -194,49 +194,84 @@ const Index = () => {
                             }
                         });
                     } else {
-                        addLog(`[${acc.email}] 🔑 Generated unique device headers`);
+                        // Fetch auto-generated headers from backend
+                        addLog(`[${acc.email}] 🔑 Generating unique device headers...`);
+                        const genRes = await fetch('/api/generate-device-headers');
+                        customHeadersObj = await genRes.json();
+                        addLog(`[${acc.email}] ✅ Device identity generated.`);
                     }
 
+                    // 2. Validate Captcha
+                    addLog(`[${acc.email}] Validating captcha...`);
+                    updateAccount(id, { status: 'registering', message: 'Validating Captcha...' });
                     let capRes = await fetch('/api/validate-captcha', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            captchaResult: result,
-                            customHeaders: customHeadersObj
-                        })
+                        body: JSON.stringify({ captchaResult: result, customHeaders: customHeadersObj })
                     });
                     let capData = await capRes.json();
+                    if (!capData.ok || !capData.certificate) throw new Error(capData.msg || "Gagal validasi captcha");
 
-                    if (!capData.ok || !capData.certificate) {
-                        throw new Error(capData.msg || "Gagal validasi captcha di server");
+                    // 3. Send OTP
+                    addLog(`[${acc.email}] 🔥 Sending OTP code...`);
+                    updateAccount(id, { status: 'registering', message: 'Mengirim OTP...' });
+                    let sendRes = await fetch('/api/send-otp', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: acc.email, certificate: capData.certificate, customHeaders: customHeadersObj })
+                    });
+                    let sendData = await sendRes.json();
+                    if (!sendData.ok) throw new Error(sendData.msg || "Gagal kirim OTP");
+                    addLog(`[${acc.email}] 📨 OTP sent! Waiting for email...`);
+
+                    // 4. Poll for OTP (Max 60s)
+                    updateAccount(id, { status: 'registering', message: 'Mencari OTP di Gmail...' });
+                    let otpFound: string | null = null;
+                    const startTime = Date.now();
+                    while (!otpFound && (Date.now() - startTime) < 65000) {
+                        addLog(`[${acc.email}] 🔍 Searching for OTP...`);
+                        let pollRes = await fetch('/api/fetch-otp', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email: acc.email, appPassword: acc.appPassword })
+                        });
+                        let pollData = await pollRes.json();
+                        if (pollData.ok && pollData.otp) {
+                            otpFound = pollData.otp;
+                            addLog(`[${acc.email}] 🔥 OTP Found: ${otpFound}`);
+                            break;
+                        }
+                        await new Promise(r => setTimeout(r, 6000)); // Poll every 6s
                     }
 
-                    // 2. Register Process
-                    let regRes = await fetch('/api/register-process', {
+                    if (!otpFound) throw new Error("OTP tidak masuk ke Gmail (Timeout 60s)");
+
+                    // 5. Complete Register
+                    addLog(`[${acc.email}] 🚀 Registering account...`);
+                    updateAccount(id, { status: 'registering', message: 'Selesaikan pendaftaran...' });
+                    let finalRes = await fetch('/api/complete-register', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             email: acc.email,
                             password: acc.passwordXT,
-                            appPassword: acc.appPassword,
+                            otp: otpFound,
                             refCode: acc.referralCode,
-                            certificate: capData.certificate,
-                            autoBind: autoBind2FA,
                             customHeaders: customHeadersObj
                         })
                     });
-                    let regData = await regRes.json();
+                    let finalData = await finalRes.json();
 
-                    if (regData.ok) {
+                    if (finalData.ok) {
                         updateAccount(id, {
                             status: 'success',
-                            message: `Registered! ID: ${regData.userId}${autoBind2FA ? ' | Joining event...' : ''}`,
-                            userId: regData.userId
+                            message: `Registered! ID: ${finalData.userId}`,
+                            userId: finalData.userId
                         });
-                        addLog(`[SUCCESS] ${acc.email} berhasil terdaftar!`);
+                        addLog(`[${acc.email}] ✅ SUCCESS! Registered & Turbo Draw started.`);
                         toast.success(`${acc.email} terdaftar!`);
                     } else {
-                        throw new Error(regData.msg || "Gagal registrasi");
+                        throw new Error(finalData.msg || "Gagal pendaftaran akhir");
                     }
                 } catch (e: any) {
                     updateAccount(id, { status: 'error', message: e.message });
