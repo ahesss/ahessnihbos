@@ -182,16 +182,20 @@ const Index = () => {
 
                 try {
                     // 1. Validate Captcha
-                    const headerLines = rawHeaders.split('\n');
+                    const headerLines = rawHeaders ? rawHeaders.split('\n') : [];
                     const customHeadersObj: any = {};
-                    headerLines.forEach(line => {
-                        const idx = line.indexOf(':');
-                        if (idx > 0) {
-                            const key = line.substring(0, idx).trim();
-                            const val = line.substring(idx + 1).trim();
-                            if (key && val) customHeadersObj[key] = val;
-                        }
-                    });
+                    if (headerLines.length > 0) {
+                        headerLines.forEach(line => {
+                            const idx = line.indexOf(':');
+                            if (idx > 0) {
+                                const key = line.substring(0, idx).trim();
+                                const val = line.substring(idx + 1).trim();
+                                if (key && val) customHeadersObj[key] = val;
+                            }
+                        });
+                    } else {
+                        addLog(`[${acc.email}] 🔑 Generated unique device headers`);
+                    }
 
                     let capRes = await fetch('/api/validate-captcha', {
                         method: 'POST',
