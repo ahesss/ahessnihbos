@@ -45,6 +45,7 @@ function generateDeviceHeaders() {
 function browserHeaders(token, customHeaders = {}, isMinimal = false, hasBody = true, userAgent = null) {
     const defaultUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
     const finalUA = userAgent || defaultUA;
+    let h = {};
 
     if (isMinimal) {
         h = {
@@ -72,9 +73,10 @@ function browserHeaders(token, customHeaders = {}, isMinimal = false, hasBody = 
         };
     }
 
+    // CRITICAL: Always merge customHeaders (unique identity) in ALL cases
     if (customHeaders && Object.keys(customHeaders).length > 0) {
         for (const [key, value] of Object.entries(customHeaders)) {
-            if (value) h[key] = value;
+            if (value && key !== 'api-version') h[key] = value;
         }
     }
 
