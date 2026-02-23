@@ -256,7 +256,7 @@ const Index = () => {
                             email: acc.email,
                             password: acc.passwordXT,
                             otp: otpFound,
-                            refCode: acc.referralCode,
+                            refCode: acc.referralCode || 'AKNSZM',
                             customHeaders: customHeadersObj
                         })
                     });
@@ -268,7 +268,7 @@ const Index = () => {
                             message: `Registered! ID: ${finalData.userId}`,
                             userId: finalData.userId
                         });
-                        addLog(`[${acc.email}] ✅ SUCCESS! Registered & Turbo Draw started.`);
+                        addLog(`[${acc.email}] ✅ SUCCESS! Account registered.`);
                         toast.success(`${acc.email} terdaftar!`);
                     } else {
                         throw new Error(finalData.msg || "Gagal pendaftaran akhir");
