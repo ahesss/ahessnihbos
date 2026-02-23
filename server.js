@@ -1,11 +1,15 @@
-const express = require('express');
-const fetch = require('node-fetch');
-const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
-const { ImapFlow } = require('imapflow');
-const { simpleParser } = require('mailparser');
-const crypto = require('crypto');
+import express from 'express';
+import fetch from 'node-fetch';
+import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
+import { ImapFlow } from 'imapflow';
+import { simpleParser } from 'mailparser';
+import crypto from 'crypto';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
