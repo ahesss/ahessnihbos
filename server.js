@@ -21,7 +21,7 @@ app.use(express.json());
 // Serve the Vite dist folder in production, or just let Vite handle it in dev
 app.use(express.static(path.join(__dirname, 'dist')));
 
-function browserHeaders(token) {
+function browserHeaders(token, customHeaders = {}) {
     const h = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
         'Accept': 'application/json, text/plain, */*',
@@ -41,6 +41,12 @@ function browserHeaders(token) {
         'accept-language': 'en-US,en;q=0.9',
         'priority': 'u=1, i'
     };
+
+    // Merge custom headers if provided
+    for (const [key, value] of Object.entries(customHeaders || {})) {
+        if (value) h[key.toLowerCase()] = value;
+    }
+
     if (token) {
         h['authorization'] = 'Bearer ' + token;
         h['token'] = token;
@@ -54,8 +60,14 @@ async function xtFetch(urlPath, opts) {
     var query = opts.query || null;
     var token = opts.token || null;
     var method = opts.method || 'POST';
+    var customHeaders = opts.customHeaders || {};
 
-    var headers = browserHeaders(token);
+    // override certain endpoints api-version based on python script logic
+    if (urlPath.includes('/acapi/')) {
+        customHeaders['api-version'] = '2';
+    }
+
+    var headers = browserHeaders(token, customHeaders);
     var url = 'https://www.xtpro.online' + urlPath;
     if (query) {
         var qs = new URLSearchParams(query).toString();
@@ -135,6 +147,7 @@ app.post('/api/register-process', async function (req, res) {
     var appPassword = req.body.appPassword;
     var refCode = req.body.refCode || '';
     var certificate = req.body.certificate;
+    var customHeaders = req.body.customHeaders || {}; // Get complete headers from frontend
 
     if (!email || !password || !appPassword || !certificate) {
         return res.status(400).json({ ok: false, msg: 'Data tidak lengkap' });
@@ -144,7 +157,8 @@ app.post('/api/register-process', async function (req, res) {
         // A. Send OTP
         let sendOtpData = await xtFetch('/uaapi/user/msg/doSendCode', {
             query: { codeType: '101' },
-            body: { codeType: '101', receiveAddress: email.trim(), puzzleValidateString: certificate, regChannel: 'xt' }
+            body: { codeType: '101', receiveAddress: email.trim(), puzzleValidateString: certificate, regChannel: 'xt' },
+            customHeaders: customHeaders
         });
         if (sendOtpData._httpStatus !== 200 && !xtSuccess(sendOtpData)) {
             throw new Error("Gagal Kirim OTP: " + xtMsg(sendOtpData));
@@ -184,7 +198,7 @@ app.post('/api/register-process', async function (req, res) {
         if (!otp) throw new Error("OTP tidak masuk dalam 60 detik.");
 
         // C. Get Public Key & Encrypt
-        let keyData = await xtFetch('/uaapi/uaa/authorize/passwd/publicKey', { method: 'POST' });
+        let keyData = await xtFetch('/uaapi/uaa/authorize/passwd/publicKey', { method: 'POST', customHeaders: customHeaders });
         if (!keyData?.data?.publicKey) throw new Error("Gagal mengambil public key");
         let loginPwd = rsaEncrypt(password, keyData.data.publicKey);
 
@@ -193,7 +207,8 @@ app.post('/api/register-process', async function (req, res) {
             body: {
                 userName: email.trim(), countryCode: '', dynamicCode: otp.trim(),
                 loginPwd: loginPwd, passwdId: keyData.data.passwdId, recommendCode: refCode.trim(), regChannel: 'xt'
-            }
+            },
+            customHeaders: customHeaders
         });
 
         if (!xtSuccess(regData)) throw new Error("Gagal mendaftar: " + xtMsg(regData));
