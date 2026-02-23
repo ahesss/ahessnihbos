@@ -43,31 +43,33 @@ function generateDeviceHeaders() {
 }
 
 function browserHeaders(token, customHeaders = {}, isMinimal = false) {
+    let h = {};
+
     if (isMinimal) {
-        return {
+        h = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
             'Accept': 'application/json, text/plain, */*',
             'Content-Type': 'application/json'
         };
+    } else {
+        // Default headers for Registration/Activities
+        h = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/plain, */*',
+            'Content-Type': 'application/json',
+            'api-version': '4',
+            'device': 'web',
+            'Origin': 'https://www.xtpro.online',
+            'Referer': 'https://www.xtpro.online/en',
+            'sec-fetch-site': 'same-origin',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-dest': 'empty',
+            'accept-language': 'en-US,en;q=0.9',
+            'priority': 'u=1, i'
+        };
     }
 
-    // Default headers for Registration/Activities
-    let h = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
-        'Accept': 'application/json, text/plain, */*',
-        'Content-Type': 'application/json',
-        'api-version': '4',
-        'device': 'web',
-        'Origin': 'https://www.xtpro.online',
-        'Referer': 'https://www.xtpro.online/en',
-        'sec-fetch-site': 'same-origin',
-        'sec-fetch-mode': 'cors',
-        'sec-fetch-dest': 'empty',
-        'accept-language': 'en-US,en;q=0.9',
-        'priority': 'u=1, i'
-    };
-
-    // Merge custom headers (manual or auto-generated)
+    // CRITICAL: Always merge customHeaders (unique identity) even if isMinimal is true
     if (customHeaders && Object.keys(customHeaders).length > 0) {
         for (const [key, value] of Object.entries(customHeaders)) {
             if (value) h[key] = value;
@@ -194,7 +196,8 @@ app.post('/api/send-otp', async function (req, res) {
         let sendOtpData = await xtFetch('/uaapi/user/msg/doSendCode', {
             query: { codeType: '101' },
             body: { codeType: '101', receiveAddress: email.trim(), puzzleValidateString: certificate, regChannel: 'xt' },
-            isMinimal: true
+            isMinimal: true,
+            customHeaders: customHeaders // Pass identity even if minimal
         });
         if (sendOtpData._httpStatus === 200 || xtSuccess(sendOtpData)) {
             res.json({ ok: true, msg: 'OTP sent' });
@@ -288,6 +291,7 @@ app.post('/api/complete-register', async function (req, res) {
         let userId = regData?.data?.userId || regData?.data?.uid || '';
         let token = regData?.data?.accessToken || '';
 
+        // Save to file
         fs.appendFileSync(ACCOUNTS_FILE, `${email}|${password}|${userId}|${refCode}|${new Date().toISOString()}|${token}\n`);
 
         // E. Activity: Apply
@@ -296,28 +300,7 @@ app.post('/api/complete-register', async function (req, res) {
             customHeaders: customHeaders
         });
 
-        // F. Activity: Red Packet Rain
-        let rainData = await xtFetch('/acapi/public/general/draw/NEWYEAR2026/start-red-packet-rain', {
-            token: token,
-            query: { activityId: '999999999999991', isFirstRedPacketRain: 'false' },
-            customHeaders: customHeaders
-        });
-
-        let rainId = rainData?.result?.redPacketRainId;
-        if (rainId) {
-            (async () => {
-                for (let i = 0; i < 50; i++) {
-                    await xtFetch('/acapi/general/draw/NEWYEAR2026/draw', {
-                        token: token,
-                        query: { times: '9', redPacketRainId: rainId },
-                        customHeaders: customHeaders
-                    });
-                    await new Promise(r => setTimeout(r, 100));
-                }
-            })();
-        }
-
-        res.json({ ok: true, userId: userId, token: token, msg: 'Berhasil mendaftar & Draw!' });
+        res.json({ ok: true, userId: userId, token: token, msg: 'Berhasil mendaftar!' });
 
     } catch (err) {
         res.status(500).json({ ok: false, msg: err.message });
