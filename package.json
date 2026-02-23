@@ -5,12 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server": "node server.js",
+    "dev:all": "start npm run server && start npm run dev",
     "build": "vite build",
-    "build:dev": "vite build --mode development",
+    "start": "node server.js",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
