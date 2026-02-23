@@ -48,19 +48,16 @@ function generateDotVariations(email: string, count: number): string[] {
     }
     return Array.from(results);
 }
-
 const Index = () => {
     const [savedGmail, setSavedGmail] = useState("");
     const [gmail, setGmail] = useState("");
     const [appPassword, setAppPassword] = useState("");
-    const [autoBind2FA, setAutoBind2FA] = useState(true);
     const [passwordXT, setPasswordXT] = useState("");
     const [referralCode, setReferralCode] = useState("");
     const [jumlah, setJumlah] = useState("5");
     const [accounts, setAccounts] = useState<AccountEntry[]>([]);
     const [bulkInput, setBulkInput] = useState("");
     const [logs, setLogs] = useState<string[]>([]);
-    const [rawHeaders, setRawHeaders] = useState('');
 
     useEffect(() => {
         setSavedGmail(localStorage.getItem('xt_saved_gmail') || '');
@@ -182,25 +179,14 @@ const Index = () => {
 
                 try {
                     const userAgent = navigator.userAgent;
-                    // 1. Prepare Headers (Auto or Manual)
+                    // 1. Prepare Headers (Auto-generated Only)
                     let customHeadersObj: any = {};
-                    const headerLines = rawHeaders ? rawHeaders.split('\n') : [];
-                    if (headerLines.length > 0) {
-                        headerLines.forEach(line => {
-                            const idx = line.indexOf(':');
-                            if (idx > 0) {
-                                const key = line.substring(0, idx).trim();
-                                const val = line.substring(idx + 1).trim();
-                                if (key && val) customHeadersObj[key] = val;
-                            }
-                        });
-                    } else {
-                        // Fetch auto-generated headers from backend
-                        addLog(`[${acc.email}] 🔑 Generating unique device headers...`);
-                        const genRes = await fetch('/api/generate-device-headers');
-                        customHeadersObj = await genRes.json();
-                        addLog(`[${acc.email}] ✅ Device identity generated.`);
-                    }
+
+                    // Fetch auto-generated headers from backend
+                    addLog(`[${acc.email}] 🔑 Generating unique device headers...`);
+                    const genRes = await fetch('/api/generate-device-headers');
+                    customHeadersObj = await genRes.json();
+                    addLog(`[${acc.email}] ✅ Device identity generated.`);
 
                     // 2. Validate Captcha
                     addLog(`[${acc.email}] Validating captcha...`);
@@ -364,30 +350,6 @@ const Index = () => {
                         className="bg-[#121214] border-[#2c2c2f] text-white focus-visible:ring-1 focus-visible:ring-green-500 focus-visible:border-green-500 h-10 font-mono tracking-widest text-lg"
                         onBlur={handleSaveGmail}
                     />
-                </div>
-
-                <div>
-                    <label className="text-xs mb-1.5 block text-[#999] font-medium">Raw Headers (Bypass WAF/Anti-Bot)</label>
-                    <Textarea
-                        value={rawHeaders}
-                        onChange={(e) => setRawHeaders(e.target.value)}
-                        placeholder="Paste headers dari Inspect Element Network tab di sini (seperti file header.txt)"
-                        className="w-full bg-[#121214] border border-[#2c2c2f] text-white rounded-md p-2 text-xs font-mono min-h-[80px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-green-500"
-                        onBlur={handleSaveGmail}
-                    />
-                </div>
-
-                <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <Checkbox
-                            checked={autoBind2FA}
-                            onCheckedChange={(v) => setAutoBind2FA(!!v)}
-                            className="border-[#555] data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
-                            id="autobind"
-                        />
-                        <label htmlFor="autobind" className="text-xs font-semibold text-white cursor-pointer">🔐 Auto-bind 2FA setelah register</label>
-                    </div>
-                    <span className="text-[10px] text-[#777] uppercase tracking-wider">(auto)</span>
                 </div>
 
                 <div>
