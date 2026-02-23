@@ -43,8 +43,10 @@ function browserHeaders(token, customHeaders = {}) {
     };
 
     // Merge custom headers if provided
-    for (const [key, value] of Object.entries(customHeaders || {})) {
-        if (value) h[key.toLowerCase()] = value;
+    if (customHeaders) {
+        for (const [key, value] of Object.entries(customHeaders)) {
+            if (value) h[key] = value;
+        }
     }
 
     if (token) {
@@ -113,6 +115,7 @@ function rsaEncrypt(plainText, publicKeyBase64) {
 // 1. Validate Captcha (Manual)
 app.post('/api/validate-captcha', async function (req, res) {
     var captchaResult = req.body.captchaResult;
+    var customHeaders = req.body.customHeaders || {};
     if (!captchaResult) return res.status(400).json({ ok: false, msg: 'captchaResult wajib' });
 
     try {
@@ -126,7 +129,8 @@ app.post('/api/validate-captcha', async function (req, res) {
 
         var data = await xtFetch('/xt-app/public/captcha/validate', {
             query: { data: JSON.stringify(solution), type: '2' },
-            method: 'POST'
+            method: 'POST',
+            customHeaders: customHeaders
         });
 
         var certificate = data?.data?.certificate;
@@ -179,16 +183,21 @@ app.post('/api/register-process', async function (req, res) {
 
         while (!otp && Date.now() < deadline) {
             let msgs = await client.search({
-                since: new Date(Date.now() - 5 * 60 * 1000),
-                or: [{ from: 'xt.com' }, { from: 'xtpro' }, { subject: 'verification' }, { subject: 'code' }, { subject: 'XT' }]
+                unseen: true,
+                since: new Date(Date.now() - 5 * 60 * 1000)
             });
             if (msgs.length > 0) {
-                for (let i = msgs.length - 1; i >= Math.max(0, msgs.length - 3); i--) {
+                for (let i = msgs.length - 1; i >= 0; i--) {
                     let msg = await client.fetchOne(msgs[i], { source: true });
                     let parsed = await simpleParser(msg.source);
                     let text = (parsed.text || '') + (parsed.html || '');
-                    let match = text.match(/\b(\d{6})\b/);
-                    if (match) { otp = match[1]; break; }
+                    let subject = (parsed.subject || '').toLowerCase();
+
+                    // Verify subject or sender
+                    if (subject.includes('verification') || subject.includes('xt') || subject.includes('code')) {
+                        let match = text.match(/\b(\d{6})\b/);
+                        if (match) { otp = match[1]; break; }
+                    }
                 }
             }
             if (!otp && Date.now() < deadline) await new Promise(r => setTimeout(r, 4000));
