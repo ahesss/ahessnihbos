@@ -47,33 +47,31 @@ function browserHeaders(token, customHeaders = {}, isMinimal = false, hasBody = 
     const finalUA = userAgent || defaultUA;
 
     if (isMinimal) {
-        let mh = {
+        h = {
             'User-Agent': finalUA,
             'Accept': 'application/json, text/plain, */*',
             'Origin': 'https://www.xtpro.online',
             'Referer': 'https://www.xtpro.online/en'
         };
-        if (hasBody) mh['Content-Type'] = 'application/json';
-        return mh;
+        if (hasBody) h['Content-Type'] = 'application/json';
+    } else {
+        // Default headers for Registration
+        h = {
+            'User-Agent': finalUA,
+            'Accept': 'application/json, text/plain, */*',
+            'Content-Type': 'application/json',
+            'api-version': '4',
+            'device': 'web',
+            'Origin': 'https://www.xtpro.online',
+            'Referer': 'https://www.xtpro.online/en',
+            'sec-fetch-site': 'same-origin',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-dest': 'empty',
+            'accept-language': 'en-US,en;q=0.9',
+            'priority': 'u=1, i'
+        };
     }
 
-    // Default headers for Registration
-    let h = {
-        'User-Agent': finalUA,
-        'Accept': 'application/json, text/plain, */*',
-        'Content-Type': 'application/json',
-        'api-version': '4',
-        'device': 'web',
-        'Origin': 'https://www.xtpro.online',
-        'Referer': 'https://www.xtpro.online/en',
-        'sec-fetch-site': 'same-origin',
-        'sec-fetch-mode': 'cors',
-        'sec-fetch-dest': 'empty',
-        'accept-language': 'en-US,en;q=0.9',
-        'priority': 'u=1, i'
-    };
-
-    // Merge custom headers only if NOT minimal
     if (customHeaders && Object.keys(customHeaders).length > 0) {
         for (const [key, value] of Object.entries(customHeaders)) {
             if (value) h[key] = value;
