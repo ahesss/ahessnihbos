@@ -48,10 +48,11 @@ function browserHeaders(token, customHeaders = {}, isMinimal = false, hasBody = 
     let h = {};
 
     if (isMinimal) {
-        // Python-like minimal headers
+        // Match python-requests default behavior
         h = {
             'User-Agent': finalUA,
-            'Accept': 'application/json, text/plain, */*'
+            'Accept': '*/*',
+            'Connection': 'keep-alive'
         };
         if (hasBody) h['Content-Type'] = 'application/json';
     } else {
@@ -72,8 +73,8 @@ function browserHeaders(token, customHeaders = {}, isMinimal = false, hasBody = 
         };
     }
 
-    // CRITICAL: Always merge customHeaders (unique identity) in ALL cases
-    if (customHeaders && Object.keys(customHeaders).length > 0) {
+    // CRITICAL: Merge customHeaders (unique identity) ONLY for Registration (not for OTP/Minimal)
+    if (!isMinimal && customHeaders && Object.keys(customHeaders).length > 0) {
         for (const [key, value] of Object.entries(customHeaders)) {
             if (value && key !== 'api-version') h[key] = value;
         }
@@ -170,8 +171,6 @@ app.post('/api/validate-captcha', async function (req, res) {
     try {
         // Match Python nomenclature exactly
         var solution = {
-            captchaId: 'f6cb1abffdcdf0b30659fd3bb4c0e929',
-            captcha_id: 'f6cb1abffdcdf0b30659fd3bb4c0e929',
             lot_number: captchaResult.lot_number,
             captcha_output: captchaResult.captcha_output,
             pass_token: captchaResult.pass_token,
