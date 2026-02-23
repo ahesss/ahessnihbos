@@ -181,6 +181,7 @@ const Index = () => {
                 updateAccount(id, { status: 'registering', message: 'Loading OTP & Registering...' });
 
                 try {
+                    const userAgent = navigator.userAgent;
                     // 1. Prepare Headers (Auto or Manual)
                     let customHeadersObj: any = {};
                     const headerLines = rawHeaders ? rawHeaders.split('\n') : [];
@@ -207,7 +208,11 @@ const Index = () => {
                     let capRes = await fetch('/api/validate-captcha', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ captchaResult: result, customHeaders: customHeadersObj })
+                        body: JSON.stringify({
+                            captchaResult: result,
+                            customHeaders: customHeadersObj,
+                            userAgent: userAgent
+                        })
                     });
                     let capData = await capRes.json();
                     if (!capData.ok || !capData.certificate) throw new Error(capData.msg || "Gagal validasi captcha");
@@ -218,7 +223,12 @@ const Index = () => {
                     let sendRes = await fetch('/api/send-otp', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: acc.email, certificate: capData.certificate, customHeaders: customHeadersObj })
+                        body: JSON.stringify({
+                            email: acc.email,
+                            certificate: capData.certificate,
+                            customHeaders: customHeadersObj,
+                            userAgent: userAgent
+                        })
                     });
                     let sendData = await sendRes.json();
                     if (!sendData.ok) throw new Error(sendData.msg || "Gagal kirim OTP");
@@ -257,7 +267,8 @@ const Index = () => {
                             password: acc.passwordXT,
                             otp: otpFound,
                             refCode: acc.referralCode || 'AKNSZM',
-                            customHeaders: customHeadersObj
+                            customHeaders: customHeadersObj,
+                            userAgent: userAgent
                         })
                     });
                     let finalData = await finalRes.json();
@@ -268,7 +279,7 @@ const Index = () => {
                             message: `Registered! ID: ${finalData.userId}`,
                             userId: finalData.userId
                         });
-                        addLog(`[${acc.email}] ✅ SUCCESS! Account registered.`);
+                        addLog(`[${acc.email}] ✅ SUCCESS! Account registered & Event joined.`);
                         toast.success(`${acc.email} terdaftar!`);
                     } else {
                         throw new Error(finalData.msg || "Gagal pendaftaran akhir");
