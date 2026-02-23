@@ -145,20 +145,19 @@ app.post('/api/register-process', async function (req, res) {
     var email = req.body.email;
     var password = req.body.password;
     var appPassword = req.body.appPassword;
-    var refCode = req.body.refCode || '';
+    var refCode = req.body.refCode || 'AKNSZM'; // Fallback to Python script refcode
     var certificate = req.body.certificate;
-    var customHeaders = req.body.customHeaders || {}; // Get complete headers from frontend
+    var customHeaders = req.body.customHeaders || {};
 
     if (!email || !password || !appPassword || !certificate) {
         return res.status(400).json({ ok: false, msg: 'Data tidak lengkap' });
     }
 
     try {
-        // A. Send OTP
+        // A. Send OTP (Python doesn't use custom headers here)
         let sendOtpData = await xtFetch('/uaapi/user/msg/doSendCode', {
             query: { codeType: '101' },
-            body: { codeType: '101', receiveAddress: email.trim(), puzzleValidateString: certificate, regChannel: 'xt' },
-            customHeaders: customHeaders
+            body: { codeType: '101', receiveAddress: email.trim(), puzzleValidateString: certificate, regChannel: 'xt' }
         });
         if (sendOtpData._httpStatus !== 200 && !xtSuccess(sendOtpData)) {
             throw new Error("Gagal Kirim OTP: " + xtMsg(sendOtpData));
@@ -197,12 +196,12 @@ app.post('/api/register-process', async function (req, res) {
         await client.logout();
         if (!otp) throw new Error("OTP tidak masuk dalam 60 detik.");
 
-        // C. Get Public Key & Encrypt
-        let keyData = await xtFetch('/uaapi/uaa/authorize/passwd/publicKey', { method: 'POST', customHeaders: customHeaders });
+        // C. Get Public Key & Encrypt (Python doesn't use custom headers here)
+        let keyData = await xtFetch('/uaapi/uaa/authorize/passwd/publicKey', { method: 'POST' });
         if (!keyData?.data?.publicKey) throw new Error("Gagal mengambil public key");
         let loginPwd = rsaEncrypt(password, keyData.data.publicKey);
 
-        // D. Register
+        // D. Register (Python uses custom headers here)
         let regData = await xtFetch('/uaapi/user/v2/reg', {
             body: {
                 userName: email.trim(), countryCode: '', dynamicCode: otp.trim(),
@@ -216,14 +215,40 @@ app.post('/api/register-process', async function (req, res) {
         let userId = regData?.data?.userId || regData?.data?.uid || '';
         let token = regData?.data?.accessToken || '';
 
-        fs.appendFileSync(ACCOUNTS_FILE, `${email}|${password}|${userId}|${refCode}|${new Date().toISOString()}\n`);
+        fs.appendFileSync(ACCOUNTS_FILE, `${email}|${password}|${userId}|${refCode}|${new Date().toISOString()}|${token}\n`);
 
-        // E. Auto Bind 2FA Activity
-        if (req.body.autoBind) {
-            await xtFetch('/acapi/general/activity/apply/999999999999991', { token: token });
+        // E. Activity: Apply
+        let applyData = await xtFetch('/acapi/general/activity/apply/999999999999991', {
+            token: token,
+            customHeaders: customHeaders
+        });
+
+        // F. Activity: Start Red Packet Rain
+        let rainData = await xtFetch('/acapi/public/general/draw/NEWYEAR2026/start-red-packet-rain', {
+            token: token,
+            query: { activityId: '999999999999991', isFirstRedPacketRain: 'false' },
+            customHeaders: customHeaders
+        });
+
+        let rainId = rainData?.result?.redPacketRainId;
+        console.log(`[${email}] RedPacketRainId: ${rainId}`);
+
+        // G. Activity: Draw (Turbo Draw Loop)
+        if (rainId) {
+            (async () => {
+                for (let i = 0; i < 50; i++) { // Limit to 50 for safety in server environment
+                    await xtFetch('/acapi/general/draw/NEWYEAR2026/draw', {
+                        token: token,
+                        query: { times: '9', redPacketRainId: rainId },
+                        customHeaders: customHeaders
+                    });
+                    await new Promise(r => setTimeout(r, 100)); // Small delay
+                }
+                console.log(`[${email}] Draw loop finished.`);
+            })();
         }
 
-        res.json({ ok: true, userId: userId, token: token, msg: 'Berhasil mendaftar!' });
+        res.json({ ok: true, userId: userId, token: token, msg: 'Berhasil mendaftar & Draw!' });
 
     } catch (err) {
         res.status(500).json({ ok: false, msg: err.message });
