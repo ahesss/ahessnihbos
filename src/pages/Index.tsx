@@ -182,18 +182,6 @@ const Index = () => {
 
                 try {
                     // 1. Validate Captcha
-                    let capRes = await fetch('/api/validate-captcha', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ captchaResult: result })
-                    });
-                    let capData = await capRes.json();
-
-                    if (!capData.ok || !capData.certificate) {
-                        throw new Error(capData.msg || "Gagal validasi captcha di server");
-                    }
-
-                    // 2. Register Process
                     const headerLines = rawHeaders.split('\n');
                     const customHeadersObj: any = {};
                     headerLines.forEach(line => {
@@ -205,6 +193,21 @@ const Index = () => {
                         }
                     });
 
+                    let capRes = await fetch('/api/validate-captcha', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            captchaResult: result,
+                            customHeaders: customHeadersObj
+                        })
+                    });
+                    let capData = await capRes.json();
+
+                    if (!capData.ok || !capData.certificate) {
+                        throw new Error(capData.msg || "Gagal validasi captcha di server");
+                    }
+
+                    // 2. Register Process
                     let regRes = await fetch('/api/register-process', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
