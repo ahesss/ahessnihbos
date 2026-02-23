@@ -385,9 +385,9 @@ const Index = () => {
                 <div className="flex flex-col gap-3">
                     {accounts.map((acc, i) => (
                         <div key={acc.id} className={`p-3 rounded-lg border relative overflow-hidden flex flex-col gap-2 transition-all ${acc.status === 'success' ? 'bg-[#1a2e1d] border-green-500/40' :
-                                acc.status === 'error' ? 'bg-[#2b1616] border-red-500/30' :
-                                    acc.status === 'registering' || acc.status === 'solving' ? 'bg-[#2d2212] border-yellow-500/40' :
-                                        'bg-[#17171a] border-[#2c2c2f]'
+                            acc.status === 'error' ? 'bg-[#2b1616] border-red-500/30' :
+                                acc.status === 'registering' || acc.status === 'solving' ? 'bg-[#2d2212] border-yellow-500/40' :
+                                    'bg-[#17171a] border-[#2c2c2f]'
                             }`}>
                             <div className="flex items-center gap-2">
                                 {acc.status === 'success' && <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />}
@@ -397,9 +397,9 @@ const Index = () => {
                                 <span className="font-mono text-[11px] truncate flex-1 text-[#ddd]">{acc.email}</span>
 
                                 <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${acc.status === 'success' ? 'bg-green-500/20 text-green-400' :
-                                        acc.status === 'error' ? 'bg-red-500/20 text-red-400' :
-                                            acc.status === 'solving' || acc.status === 'registering' ? 'bg-yellow-500/20 text-yellow-400' :
-                                                'bg-[#333] text-[#777]'
+                                    acc.status === 'error' ? 'bg-red-500/20 text-red-400' :
+                                        acc.status === 'solving' || acc.status === 'registering' ? 'bg-yellow-500/20 text-yellow-400' :
+                                            'bg-[#333] text-[#777]'
                                     }`}>
                                     {acc.status}
                                 </span>
@@ -419,7 +419,7 @@ const Index = () => {
                                 </Button>
                             ) : acc.message ? (
                                 <div className={`text-[11px] ${acc.status === 'success' ? 'text-green-400 font-medium flex items-center gap-1.5' :
-                                        acc.status === 'error' ? 'text-red-400' : 'text-yellow-400 animate-pulse'
+                                    acc.status === 'error' ? 'text-red-400' : 'text-yellow-400 animate-pulse'
                                     }`}>
                                     {acc.status === 'success' && <CheckCircle2 className="w-3 h-3" />}
                                     {acc.message}
@@ -430,16 +430,16 @@ const Index = () => {
                 </div>
             </div>
 
-            <div className="fixed bottom-0 left-0 right-0 p-3 bg-[#121214]/95 backdrop-blur-sm border-t border-[#2c2c2f] z-50 flex flex-col gap-2 max-w-lg mx-auto">
+            <div className="mt-8 p-3 bg-[#121214]/95 border border-[#2c2c2f] rounded-xl flex flex-col gap-2">
                 <Button onClick={handleStartBatch} disabled={pendingCount === 0} className="w-full bg-[#1dae54] hover:bg-green-500 text-white font-bold h-11 text-sm shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
                     <Play className="w-4 h-4 mr-2" />
                     Start Batch ({pendingCount})
                 </Button>
-                <div className="max-h-[120px] overflow-y-auto bg-[#0a0a0b] p-2 rounded-md font-mono text-[10px] text-[#888] flex flex-col-reverse">
+                <div className="max-h-[150px] overflow-y-auto bg-[#0a0a0b] p-3 rounded-md font-mono text-[11px] text-[#888] flex flex-col-reverse border border-[#222]">
                     {logs.slice().reverse().map((log, i) => (
-                        <div key={i} className={`whitespace-pre-wrap ${log.includes('[SUCCESS]') ? 'text-green-400' : log.includes('[ERROR]') ? 'text-red-400' : ''}`}>{log}</div>
+                        <div key={i} className={`whitespace-pre-wrap mb-1 ${log.includes('[SUCCESS]') ? 'text-green-400' : log.includes('[ERROR]') ? 'text-red-400' : ''}`}>{log}</div>
                     ))}
-                    {logs.length === 0 && <span>≥ Logs ready</span>}
+                    {logs.length === 0 && <span>≥ Logs ready (menunggu eksekusi)</span>}
                 </div>
             </div>
         </div>
