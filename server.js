@@ -21,18 +21,33 @@ app.use(express.json());
 // Serve the Vite dist folder in production, or just let Vite handle it in dev
 app.use(express.static(path.join(__dirname, 'dist')));
 
+function generateDeviceHeaders() {
+    // Generate IDs that look like real browser/app IDs
+    const deviceId = crypto.randomUUID().replace(/-/g, '');
+    const fingerprint = crypto.randomBytes(32).toString('hex');
+    const ts = Date.now().toString();
+
+    return {
+        'client-device-id': deviceId,
+        'client-code': deviceId,
+        'bangsheng-finger-print-token': fingerprint,
+        'trace-ts': ts,
+        'api-version': '4',
+        'device': 'web',
+        'client-device-name': 'Chrome V144.0.0.0 (Win10)',
+        'lang': 'in',
+        'sec-ch-ua-platform': '"Windows"',
+        'sec-ch-ua': '"Not(A:Brand";v="8", "Chromium";v="144", "Google Chrome";v="144"',
+        'sec-ch-ua-mobile': '?0'
+    };
+}
+
 function browserHeaders(token, customHeaders = {}) {
-    const h = {
+    // Start with a set of default headers
+    let h = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
         'Accept': 'application/json, text/plain, */*',
         'Content-Type': 'application/json',
-        'sec-ch-ua-platform': '"Windows"',
-        'lang': 'in',
-        'sec-ch-ua': '"Not(A:Brand";v="8", "Chromium";v="144", "Google Chrome";v="144"',
-        'api-version': '4',
-        'sec-ch-ua-mobile': '?0',
-        'device': 'web',
-        'client-device-name': 'Chrome V144.0.0.0 (Win10)',
         'Origin': 'https://www.xtpro.online',
         'Referer': 'https://www.xtpro.online/en',
         'sec-fetch-site': 'same-origin',
@@ -42,8 +57,15 @@ function browserHeaders(token, customHeaders = {}) {
         'priority': 'u=1, i'
     };
 
-    // Merge custom headers if provided
-    if (customHeaders) {
+    // If no custom headers provided, generate one set for this session/request
+    // Note: In a real bot, we'd want to keep the SAME device headers per account lifecycle.
+    const autoHeaders = generateDeviceHeaders();
+
+    // Merge order: Auto-generated < Defaults < Custom
+    h = { ...autoHeaders, ...h };
+
+    // Merge custom headers if provided (manual paste)
+    if (customHeaders && Object.keys(customHeaders).length > 0) {
         for (const [key, value] of Object.entries(customHeaders)) {
             if (value) h[key] = value;
         }
