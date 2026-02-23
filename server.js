@@ -42,34 +42,33 @@ function generateDeviceHeaders() {
     };
 }
 
-function browserHeaders(token, customHeaders = {}, isMinimal = false) {
-    let h = {};
-
+function browserHeaders(token, customHeaders = {}, isMinimal = false, hasBody = true) {
     if (isMinimal) {
-        h = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
-            'Accept': 'application/json, text/plain, */*',
-            'Content-Type': 'application/json'
+        let mh = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/plain, */*'
         };
-    } else {
-        // Default headers for Registration/Activities
-        h = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
-            'Accept': 'application/json, text/plain, */*',
-            'Content-Type': 'application/json',
-            'api-version': '4',
-            'device': 'web',
-            'Origin': 'https://www.xtpro.online',
-            'Referer': 'https://www.xtpro.online/en',
-            'sec-fetch-site': 'same-origin',
-            'sec-fetch-mode': 'cors',
-            'sec-fetch-dest': 'empty',
-            'accept-language': 'en-US,en;q=0.9',
-            'priority': 'u=1, i'
-        };
+        if (hasBody) mh['Content-Type'] = 'application/json';
+        return mh;
     }
 
-    // CRITICAL: Always merge customHeaders (unique identity) even if isMinimal is true
+    // Default headers for Registration
+    let h = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Content-Type': 'application/json',
+        'api-version': '4',
+        'device': 'web',
+        'Origin': 'https://www.xtpro.online',
+        'Referer': 'https://www.xtpro.online/en',
+        'sec-fetch-site': 'same-origin',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-dest': 'empty',
+        'accept-language': 'en-US,en;q=0.9',
+        'priority': 'u=1, i'
+    };
+
+    // Merge custom headers only if NOT minimal
     if (customHeaders && Object.keys(customHeaders).length > 0) {
         for (const [key, value] of Object.entries(customHeaders)) {
             if (value) h[key] = value;
@@ -95,9 +94,10 @@ async function xtFetch(urlPath, opts) {
     // Override api-version per Python script logic
     if (urlPath.includes('/acapi/')) {
         customHeaders['api-version'] = '2';
+        customHeaders['xt-host'] = 'www.xtpro.online';
     }
 
-    var headers = browserHeaders(token, customHeaders, isMinimal);
+    var headers = browserHeaders(token, customHeaders, isMinimal, !!body);
     var url = 'https://www.xtpro.online' + urlPath;
     if (query) {
         var qs = new URLSearchParams(query).toString();
@@ -230,17 +230,20 @@ app.post('/api/fetch-otp', async function (req, res) {
         await client.mailboxOpen('INBOX');
 
         let msgs = await client.search({
-            unseen: true,
-            since: new Date(Date.now() - 5 * 60 * 1000)
+            since: new Date(Date.now() - 10 * 60 * 1000) // Broader search for last 10 mins
         });
 
         if (msgs.length > 0) {
-            for (let i = msgs.length - 1; i >= 0; i--) {
+            // Check last 5 messages for speed and accuracy
+            for (let i = msgs.length - 1; i >= Math.max(0, msgs.length - 5); i--) {
                 let msg = await client.fetchOne(msgs[i], { source: true });
                 let parsed = await simpleParser(msg.source);
                 let text = (parsed.text || '') + (parsed.html || '');
                 let subject = (parsed.subject || '').toLowerCase();
-                if (subject.includes('verification') || subject.includes('xt') || subject.includes('code')) {
+                let from = (parsed.from?.text || '').toLowerCase();
+
+                // Relaxed criteria: focus on "verification" or "xt" anywhere in subject/sender
+                if (subject.includes('verification') || subject.includes('xt') || subject.includes('code') || from.includes('xt')) {
                     let match = text.match(/\b(\d{6})\b/);
                     if (match) { otp = match[1]; break; }
                 }
@@ -293,12 +296,6 @@ app.post('/api/complete-register', async function (req, res) {
 
         // Save to file
         fs.appendFileSync(ACCOUNTS_FILE, `${email}|${password}|${userId}|${refCode}|${new Date().toISOString()}|${token}\n`);
-
-        // E. Activity: Apply
-        await xtFetch('/acapi/general/activity/apply/999999999999991', {
-            token: token,
-            customHeaders: customHeaders
-        });
 
         res.json({ ok: true, userId: userId, token: token, msg: 'Berhasil mendaftar!' });
 
