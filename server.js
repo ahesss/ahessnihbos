@@ -206,8 +206,8 @@ app.post('/api/send-otp', async function (req, res) {
 
     try {
         let sendOtpData = await xtFetch('/uaapi/user/msg/doSendCode', {
-            query: { codeType: '101' },
-            body: { codeType: '101', receiveAddress: email.trim(), puzzleValidateString: certificate, regChannel: 'xt' },
+            query: { codeType: '101', apiKey: 'regist' },
+            body: { codeType: '101', receiveAddress: email.trim(), puzzleValidateString: certificate, regChannel: 'regist' },
             isMinimal: true,
             customHeaders: customHeaders,
             userAgent: userAgent
@@ -298,8 +298,14 @@ app.post('/api/complete-register', async function (req, res) {
         // D. Register
         let regData = await xtFetch('/uaapi/user/v2/reg', {
             body: {
-                userName: email.trim(), countryCode: '', dynamicCode: otp.trim(),
-                loginPwd: loginPwd, passwdId: keyData.data.passwdId, recommendCode: refCode.trim(), regChannel: 'xt'
+                userName: email.trim(),
+                countryCode: '',
+                dynamicCode: otp.trim(),
+                loginPwd: loginPwd,
+                passwdId: keyData.data.passwdId,
+                recommendCode: refCode.trim(),
+                regChannel: 'regist',
+                apiKey: 'regist'
             },
             customHeaders: customHeaders,
             userAgent: userAgent
