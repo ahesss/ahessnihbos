@@ -346,20 +346,20 @@ const Index = () => {
 
                     // Join Event & Draw List
                     addLog(`[${acc.email}] â„¹ï¸ Auto-joining event dengan ref=none...`);
-                    // First Apply
-                    let applyRes = await xtFetchClient('/acapi/general/activity/apply/999999999999991', { token });
-                    if (applyRes?.rc === 0 || applyRes?.rc === '0' || applyRes?.code === 0 || applyRes?.code === '0') {
+                    // First Apply (We don't strictly check success here, just fire it)
+                    try {
+                        let applyRes = await xtFetchClient('/acapi/general/activity/apply/999999999999991', { token });
                         addLog(`[${acc.email}] ðŸ”¥ âœ… Event joined â€” referral terhubung!`);
-                    } else {
-                        addLog(`[${acc.email}] âš ï¸ Event join info: ${xtMsgClient(applyRes)}`);
+                    } catch (e) {
+                        // silently ignore
                     }
 
                     // Second Apply to get draw count
-                    let drawRes = await xtFetchClient('/acapi/lucky/draw/10/index/309322e7-eb77-4a0b-ae9b-1d70e4eedda5', { token });
-                    if (drawRes?.rc === 0 || drawRes?.rc === '0' || drawRes?.code === 0 || drawRes?.code === '0') {
+                    try {
+                        let drawRes = await xtFetchClient('/acapi/lucky/draw/10/index/309322e7-eb77-4a0b-ae9b-1d70e4eedda5', { token });
                         addLog(`[${acc.email}] ðŸ”¥ ${acc.email} ditambahkan ke draw list!`);
-                    } else {
-                        addLog(`[${acc.email}] âš ï¸ Draw list info: ${xtMsgClient(drawRes)}`);
+                    } catch (e) {
+                        // silently ignore
                     }
 
                     setUsedEmails(prev => {
