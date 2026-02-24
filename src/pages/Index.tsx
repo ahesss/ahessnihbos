@@ -532,11 +532,11 @@ const Index = () => {
     return (
         <div className="min-h-screen bg-[#0f0f10] text-[#ececec] p-4 max-w-lg mx-auto pb-24 font-inter text-sm">
             {/* Header - Ditengah, logo agak besar, huruf besar AHESS */}
-            <div className="flex flex-col items-center justify-center mb-6 p-2 border-b border-[#2c2c2f] pb-6 relative">
-                <div className="flex flex-col items-center gap-2 mb-2">
+            <div className="flex flex-col items-center justify-center mb-4 p-2 border-b border-[#2c2c2f] pb-4 relative">
+                <div className="flex flex-col items-center gap-1 mb-1">
                     <Bot className="w-12 h-12 text-green-500 drop-shadow-[0_0_15px_rgba(34,197,94,0.3)]" />
-                    <h1 className="text-[22px] font-black text-[#ececec] tracking-widest uppercase">
-                        AHESS <span className="text-[#888] text-[16px] font-bold tracking-normal ml-1">v3.0</span>
+                    <h1 className="text-[22px] font-black text-[#ececec] tracking-widest uppercase mb-0">
+                        AHESS
                     </h1>
                 </div>
                 {/* IP Jaringan - Kanan atas, agak kecil */}
@@ -717,22 +717,22 @@ const Index = () => {
 
             {/* Account List */}
             <div className="mb-6">
-                <h3 className="text-xs font-bold text-[#888] mb-3 uppercase tracking-wider">{accounts.length} akun — {pendingCount} pending</h3>
-                <div className="flex flex-col gap-3">
+                <h3 className="text-xs font-bold text-[#888] mb-2 uppercase tracking-wider">{accounts.length} akun — {pendingCount} pending</h3>
+                <div className="flex flex-col gap-2">
                     {accounts.map((acc, i) => (
-                        <div key={acc.id} className={`p-3 rounded-lg border relative overflow-hidden flex flex-col gap-2 transition-all ${acc.status === 'success' ? 'bg-[#1a2e1d] border-green-500/40' :
+                        <div key={acc.id} className={`p-2 rounded-md border relative overflow-hidden flex flex-col gap-1.5 transition-all ${acc.status === 'success' ? 'bg-[#1a2e1d] border-green-500/40' :
                             acc.status === 'error' ? 'bg-[#2b1616] border-red-500/30' :
                                 acc.status === 'registering' || acc.status === 'solving' ? 'bg-[#2d2212] border-yellow-500/40' :
                                     'bg-[#17171a] border-[#2c2c2f]'
                             }`}>
-                            <div className="flex items-center gap-2">
-                                {acc.status === 'success' && <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />}
-                                {acc.status === 'error' && <div className="w-3.5 h-3.5 shrink-0 bg-red-500/20 rounded-full flex items-center justify-center text-red-500 text-[10px] font-bold">!</div>}
-                                {acc.status === 'pending' && <User className="w-3.5 h-3.5 text-[#555] shrink-0" />}
+                            <div className="flex items-center gap-1.5 w-full">
+                                {acc.status === 'success' && <CheckCircle2 className="w-3 h-3 text-green-500 shrink-0" />}
+                                {acc.status === 'error' && <div className="w-3 h-3 shrink-0 bg-red-500/20 rounded-full flex items-center justify-center text-red-500 text-[9px] font-bold">!</div>}
+                                {acc.status === 'pending' && <User className="w-3 h-3 text-[#555] shrink-0" />}
 
-                                <span className="font-mono text-[11px] truncate flex-1 text-[#ddd]">{acc.email}</span>
+                                <span className="font-mono text-[10px] truncate flex-1 text-[#ddd]">{acc.email}</span>
 
-                                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${acc.status === 'success' ? 'bg-green-500/20 text-green-400' :
+                                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-sm ${acc.status === 'success' ? 'bg-green-500/20 text-green-400' :
                                     acc.status === 'error' ? 'bg-red-500/20 text-red-400' :
                                         acc.status === 'solving' || acc.status === 'registering' ? 'bg-yellow-500/20 text-yellow-400' :
                                             'bg-[#333] text-[#777]'
@@ -740,21 +740,21 @@ const Index = () => {
                                     {acc.status}
                                 </span>
 
-                                <button onClick={() => removeAccount(acc.id)} className="text-[#555] hover:text-red-400 p-1">
-                                    <Trash2 className="w-3.5 h-3.5" />
+                                <button onClick={() => removeAccount(acc.id)} className="text-[#555] hover:text-red-400 p-0.5 shrink-0 ml-1">
+                                    <Trash2 className="w-3 h-3" />
                                 </button>
                             </div>
 
                             {acc.status === 'pending' || acc.status === 'error' ? (
                                 <Button
                                     onClick={() => startManualCaptcha(acc.id)}
-                                    className="w-full bg-[#20bb5c] hover:bg-[#1dae54] text-white h-9 text-xs font-semibold shadow-[0_0_10px_rgba(32,187,92,0.2)]"
+                                    className="w-full bg-[#20bb5c] hover:bg-[#1dae54] text-white h-7 text-[10px] font-semibold rounded shadow-[0_0_10px_rgba(32,187,92,0.2)] mt-0.5"
                                 >
-                                    <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
+                                    <ShieldCheck className="w-3 h-3 mr-1" />
                                     Solve Captcha & Register
                                 </Button>
                             ) : acc.message ? (
-                                <div className={`text-[11px] ${acc.status === 'success' ? 'text-green-400 font-medium flex items-center gap-1.5' :
+                                <div className={`text-[10px] ${acc.status === 'success' ? 'text-green-400 font-medium flex items-center gap-1.5' :
                                     acc.status === 'error' ? 'text-red-400' : 'text-yellow-400 animate-pulse'
                                     }`}>
                                     {acc.status === 'success' && <CheckCircle2 className="w-3 h-3" />}
