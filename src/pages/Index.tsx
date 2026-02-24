@@ -531,28 +531,29 @@ const Index = () => {
 
     return (
         <div className="min-h-screen bg-[#0f0f10] text-[#ececec] p-4 max-w-lg mx-auto pb-24 font-inter text-sm">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6 p-2 border-b border-[#2c2c2f] pb-4">
-                <div className="flex items-center gap-2">
-                    <Bot className="w-6 h-6 text-green-500" />
-                    <h1 className="text-[16px] font-bold text-[#888] tracking-wide">
-                        ahess nih boss <span className="text-white text-[15px]">v3.0</span>
+            {/* Header - Ditengah, logo agak besar, huruf besar AHESS */}
+            <div className="flex flex-col items-center justify-center mb-6 p-2 border-b border-[#2c2c2f] pb-6 relative">
+                <div className="flex flex-col items-center gap-2 mb-2">
+                    <Bot className="w-12 h-12 text-green-500 drop-shadow-[0_0_15px_rgba(34,197,94,0.3)]" />
+                    <h1 className="text-[22px] font-black text-[#ececec] tracking-widest uppercase">
+                        AHESS <span className="text-[#888] text-[16px] font-bold tracking-normal ml-1">v3.0</span>
                     </h1>
                 </div>
-                <div className="flex items-center gap-1.5 bg-[#17171a] border border-[#2c2c2f] rounded-full px-3 py-1">
-                    <Globe className="w-3.5 h-3.5 text-green-500" />
-                    <span className="text-[12px] font-mono text-[#aaa]">{serverIp}</span>
+                {/* IP Jaringan - Kanan atas, agak kecil */}
+                <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-[#17171a] border border-[#2c2c2f] rounded-full px-2.5 py-1">
+                    <Globe className="w-3 h-3 text-green-500" />
+                    <span className="text-[10px] font-mono text-[#aaa]">{serverIp}</span>
                 </div>
             </div>
 
-            {/* Saved Configurations List */}
+            {/* Saved Configurations List - Jarak didekatkan, ukuran diperkecil */}
             {savedConfigs.length > 0 && (
-                <div className="mb-6 space-y-3">
+                <div className="mb-5 space-y-2">
                     <div className="flex justify-between items-center mb-1">
-                        <h3 className="text-xs font-bold text-[#777] uppercase tracking-wider">Profil Tersimpan</h3>
+                        <h3 className="text-[10px] font-bold text-[#777] uppercase tracking-wider">Profil Tersimpan</h3>
                     </div>
                     {savedConfigs.map((conf, idx) => (
-                        <div key={conf.id} className="bg-[#17171a] p-3 rounded-lg border border-[#2c2c2f] hover:border-[#189b4a] transition-colors group cursor-pointer"
+                        <div key={conf.id} className="bg-[#17171a] p-2 rounded-md border border-[#2c2c2f] hover:border-[#189b4a] transition-colors group cursor-pointer"
                             onClick={() => {
                                 setGmail(conf.gmail);
                                 setPasswordXT(conf.passXT);
@@ -561,16 +562,16 @@ const Index = () => {
                                 handleSaveActiveForm();
                                 toast.success("Profil dimuat ke form");
                             }}>
-                            <div className="flex justify-between items-start mb-2">
-                                <p className="text-xs text-green-400 font-bold truncate flex-1">{conf.gmail}</p>
-                                <button onClick={(e) => { e.stopPropagation(); handleDeleteConfig(conf.id); }} className="text-[#555] hover:text-red-500 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1">
-                                    <Trash2 className="w-4 h-4" />
+                            <div className="flex justify-between items-start mb-1.5">
+                                <p className="text-[11px] text-green-400 font-bold truncate flex-1">{conf.gmail}</p>
+                                <button onClick={(e) => { e.stopPropagation(); handleDeleteConfig(conf.id); }} className="text-[#555] hover:text-red-500 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-0.5">
+                                    <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                             </div>
-                            <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-[11px] font-mono text-[#aaa]">
+                            <div className="grid grid-cols-2 gap-y-1 gap-x-3 text-[10px] font-mono text-[#aaa]">
                                 <div className="truncate"><span className="text-[#555]">XT:</span> {conf.passXT ? '********' : '-'}</div>
                                 <div className="truncate"><span className="text-[#555]">Ref:</span> <span className="text-yellow-400">{conf.refCode || '-'}</span></div>
-                                <div className="truncate flex items-center gap-1.5 col-span-2">
+                                <div className="truncate flex items-center gap-1 col-span-2">
                                     <span className="text-[#555]">App:</span>
                                     <span>{visibleAppPassIdx === idx ? conf.appPass : (conf.appPass ? '********' : '-')}</span>
                                     {conf.appPass && (
@@ -581,7 +582,7 @@ const Index = () => {
                                             }}
                                             className="ml-auto text-[#666] hover:text-white mr-1"
                                         >
-                                            {visibleAppPassIdx === idx ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                            {visibleAppPassIdx === idx ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                                         </button>
                                     )}
                                 </div>
@@ -690,8 +691,8 @@ const Index = () => {
                     </Select>
                 </div>
 
-                {/* Stats Bawah */}
-                <div className="flex justify-between items-center text-xs pt-1">
+                {/* Stats Bawah & Tombol Kanan Kiri */}
+                <div className="flex justify-between items-center text-xs pt-1 mb-2">
                     <p>
                         <span className="text-yellow-500 font-bold">{accounts.length} di antrean</span>
                         <span className="text-[#666]"> • </span>
@@ -702,10 +703,16 @@ const Index = () => {
                     </button>
                 </div>
 
-                <Button onClick={handleGenerate} className="w-full bg-[#189b4a] hover:bg-green-600 text-white font-semibold flex items-center gap-2 h-11 text-sm mt-2 transition-all active:scale-[0.98]">
-                    <Shuffle className="w-4 h-4" />
-                    Generate Dot Trick
-                </Button>
+                <div className="flex gap-2 w-full">
+                    <Button onClick={handleGenerate} className="flex-1 bg-[#189b4a] hover:bg-green-600 text-white font-semibold flex items-center justify-center gap-2 h-11 text-sm mt-2 transition-all active:scale-[0.98]">
+                        <Shuffle className="w-4 h-4" />
+                        Generate Dot Trick
+                    </Button>
+                    <Button onClick={handleStartBatch} disabled={pendingCount === 0} className="w-[120px] bg-[#1dae54] hover:bg-green-500 text-white font-bold h-11 text-sm mt-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98]">
+                        <Play className="w-4 h-4 mr-1.5" />
+                        Batch
+                    </Button>
+                </div>
             </div>
 
             {/* Account List */}
@@ -760,10 +767,11 @@ const Index = () => {
             </div>
 
             <div className="mt-8 p-3 bg-[#121214]/95 border border-[#2c2c2f] rounded-xl flex flex-col gap-2">
-                <Button onClick={handleStartBatch} disabled={pendingCount === 0} className="w-full bg-[#1dae54] hover:bg-green-500 text-white font-bold h-11 text-sm shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
-                    <Play className="w-4 h-4 mr-2" />
-                    Start Batch ({pendingCount})
-                </Button>
+                <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-xs font-bold text-[#888] uppercase tracking-wider flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-green-500" /> System Logs
+                    </h3>
+                </div>
                 <div className="max-h-[300px] overflow-y-auto bg-[#0a0a0b] p-3 rounded-md font-mono text-[11px] text-[#888] flex flex-col-reverse border border-[#222]">
                     {logs.slice().reverse().map((log, i) => (
                         <div key={i} className={`whitespace-pre-wrap mb-1 ${log.includes('[SUCCESS]') ? 'text-green-400' : log.includes('[ERROR]') ? 'text-red-400' : ''}`}>{log}</div>
