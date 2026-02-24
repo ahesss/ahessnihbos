@@ -81,7 +81,16 @@ const Index = () => {
     const [visibleAppPassIdx, setVisibleAppPassIdx] = useState<number | null>(null);
     const [syncToken, setSyncToken] = useState<string>(localStorage.getItem('xt_sync_token') || '');
 
+    // Authorization State
+    const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
+    const [pinInput, setPinInput] = useState("");
+    const CORRECT_PIN = "AHESS2026";
+
     useEffect(() => {
+        // Cek login status awal
+        if (localStorage.getItem('xt_authorized') === 'true') {
+            setIsAuthorized(true);
+        }
         // Load persist form data
         setGmail(localStorage.getItem('xt_active_gmail') || '');
         setPasswordXT(localStorage.getItem('xt_active_pass') || 'Dicoba@11');
@@ -119,6 +128,24 @@ const Index = () => {
             })
             .catch(() => setServerIp("Error loading IP"));
     }, []);
+
+    const handleLogin = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (pinInput === CORRECT_PIN) {
+            setIsAuthorized(true);
+            localStorage.setItem('xt_authorized', 'true');
+            toast.success("Akses Diberikan!");
+        } else {
+            toast.error("PIN Akses Salah!");
+            setPinInput("");
+        }
+    };
+
+    const handleLogout = () => {
+        setIsAuthorized(false);
+        localStorage.removeItem('xt_authorized');
+        toast("Sesi diakhiri");
+    };
 
     const addLog = (msg: string) => {
         const time = new Date().toLocaleTimeString('id-ID', { hour12: false });
@@ -543,12 +570,42 @@ const Index = () => {
     const pendingCount = accounts.filter(a => a.status === 'pending' || a.status === 'error').length;
     const remainingCount = accounts.filter(a => a.status !== 'success').length;
 
+    if (!isAuthorized) {
+        return (
+            <div className="min-h-screen bg-[#0f0f10] text-[#ececec] flex items-center justify-center p-4 font-inter">
+                <div className="bg-[#17171a] border border-[#2c2c2f] p-8 rounded-2xl w-full max-w-sm flex flex-col items-center shadow-2xl relative overflow-hidden">
+                    {/* Decorative glow */}
+                    <div className="absolute -top-10 -left-10 w-32 h-32 bg-green-500/10 rounded-full blur-3xl point-events-none"></div>
+                    <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl point-events-none"></div>
+
+                    <Bot className="w-16 h-16 text-green-500 drop-shadow-[0_0_15px_rgba(34,197,94,0.4)] mb-4 relative z-10" />
+                    <h1 className="text-2xl font-black tracking-widest uppercase mb-1 relative z-10">AHESS <span className="text-green-500">PRO</span></h1>
+                    <p className="text-xs text-[#777] mb-8 font-medium text-center relative z-10">Auto-Registration System<br />Area Terbatas</p>
+
+                    <form onSubmit={handleLogin} className="w-full relative z-10 flex flex-col gap-3">
+                        <Input
+                            type="password"
+                            placeholder="Masukkan PIN Akses"
+                            value={pinInput}
+                            onChange={e => setPinInput(e.target.value)}
+                            className="bg-[#121214] border-[#333] text-center text-lg tracking-widest focus-visible:ring-1 focus-visible:ring-green-500 h-12"
+                            autoFocus
+                        />
+                        <Button type="submit" className="w-full bg-[#1dae54] hover:bg-green-500 text-white font-bold h-12 rounded-lg transition-transform active:scale-[0.98]">
+                            MASUK
+                        </Button>
+                    </form>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="min-h-screen bg-[#0f0f10] text-[#ececec] p-4 max-w-lg mx-auto pb-24 font-inter text-sm">
+        <div className="min-h-screen bg-[#0f0f10] text-[#ececec] p-4 max-w-lg mx-auto pb-24 font-inter text-sm relative">
             {/* Header - Ditengah, logo agak besar, huruf besar AHESS */}
             <div className="flex flex-col items-center justify-center mb-4 p-2 border-b border-[#2c2c2f] pb-4 relative">
-                <div className="flex flex-col items-center gap-1 mb-1">
-                    <Bot className="w-12 h-12 text-green-500 drop-shadow-[0_0_15px_rgba(34,197,94,0.3)]" />
+                <div className="flex flex-col items-center gap-1 mb-1 relative group cursor-pointer" onClick={handleLogout} title="Klik logo untuk Logout">
+                    <Bot className="w-12 h-12 text-green-500 drop-shadow-[0_0_15px_rgba(34,197,94,0.3)] transition-transform group-hover:scale-105 group-hover:text-red-500 group-hover:drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]" />
                     <h1 className="text-[22px] font-black text-[#ececec] tracking-widest uppercase mb-0">
                         AHESS
                     </h1>
