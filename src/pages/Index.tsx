@@ -59,18 +59,20 @@ const Index = () => {
     const [bulkInput, setBulkInput] = useState("");
     const [logs, setLogs] = useState<string[]>([]);
     const [serverIp, setServerIp] = useState("Loading IP...");
+    const [usedEmails, setUsedEmails] = useState<string[]>([]);
 
     useEffect(() => {
         setSavedGmail(localStorage.getItem('xt_saved_gmail') || '');
         setPasswordXT(localStorage.getItem('xt_saved_pass') || 'Dicoba@11');
         setReferralCode(localStorage.getItem('xt_saved_ref') || '');
         setAppPassword(localStorage.getItem('xt_saved_app') || '');
+        setUsedEmails(JSON.parse(localStorage.getItem('xt_used_emails') || '[]'));
 
-        // Fetch Server IP
-        fetch('/api/ip')
+        // Fetch Client IP directly from browser
+        fetch('https://api.ipify.org?format=json')
             .then(res => res.json())
             .then(data => {
-                if (data.ok && data.ip) setServerIp(data.ip);
+                if (data.ip) setServerIp(data.ip);
                 else setServerIp("Unknown IP");
             })
             .catch(() => setServerIp("Error loading IP"));
@@ -105,7 +107,13 @@ const Index = () => {
             return;
         }
         const count = parseInt(jumlah);
-        const variations = generateDotVariations(emailToUse, count);
+        const allVariations = generateDotVariations(emailToUse, Math.max(count * 5, 500));
+        const variations = allVariations.filter(v => !usedEmails.includes(v)).slice(0, count);
+
+        if (variations.length === 0) {
+            toast.error("Semua variasi dot trick dari email ini sudah terdaftar!");
+            return;
+        }
 
         const newAccounts: AccountEntry[] = variations.map(v => ({
             id: Math.random().toString(36).substring(7),
@@ -339,6 +347,12 @@ const Index = () => {
                     // Join Event
                     await xtFetchClient('/acapi/general/activity/apply/999999999999991', { token });
 
+                    setUsedEmails(prev => {
+                        const updated = [...prev, acc.email];
+                        localStorage.setItem('xt_used_emails', JSON.stringify(updated));
+                        return updated;
+                    });
+
                     updateAccount(id, { status: 'success', message: `Registered! ID: ${userId}`, userId });
                     addLog(`[${acc.email}] âœ… SUCCESS! Account registered.`);
                     toast.success(`${acc.email} terdaftar!`);
@@ -387,17 +401,29 @@ const Index = () => {
                 </div>
             </div>
 
-            {/* Saved Gmail */}
+            {/* Saved Configuration */}
             {savedGmail && (
-                <div className="mb-5 bg-[#17171a] p-3 rounded-lg border border-[#2c2c2f]">
-                    <p className="text-xs mb-2 text-[#777]">Saved Gmail:</p>
-                    <div className="flex items-center gap-2">
-                        <span className="bg-green-500/10 border border-green-500/30 text-green-500 px-3 py-1.5 rounded-md text-xs font-mono">
-                            {savedGmail}
-                        </span>
-                        <button onClick={handleDeleteSaved} className="text-[#a1a1aa] hover:text-red-500 ml-auto transition-colors">
+                <div
+                    className="mb-5 bg-[#17171a] p-3 rounded-lg border border-[#2c2c2f] cursor-pointer hover:border-[#189b4a] transition-colors"
+                    onClick={() => {
+                        setGmail(savedGmail);
+                        setPasswordXT(localStorage.getItem('xt_saved_pass') || '');
+                        setReferralCode(localStorage.getItem('xt_saved_ref') || '');
+                        setAppPassword(localStorage.getItem('xt_saved_app') || '');
+                        toast.success("Data berhasil dimuat ke form");
+                    }}
+                >
+                    <div className="flex justify-between items-start mb-2">
+                        <p className="text-xs text-[#777] font-semibold">Saved Configuration (Klik untuk memuat):</p>
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteSaved(); }} className="text-[#a1a1aa] hover:text-red-500 transition-colors">
                             <Trash2 className="w-4 h-4" />
                         </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-[#aaa]">
+                        <div className="truncate"><span className="text-[#555]">Gmail:</span> <span className="text-green-400">{savedGmail}</span></div>
+                        <div className="truncate"><span className="text-[#555]">Pass XT:</span> {localStorage.getItem('xt_saved_pass') ? 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢' : '-'}</div>
+                        <div className="truncate"><span className="text-[#555]">App Pass:</span> {localStorage.getItem('xt_saved_app') ? 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢' : '-'}</div>
+                        <div className="truncate"><span className="text-[#555]">Ref:</span> <span className="text-yellow-400">{localStorage.getItem('xt_saved_ref')}</span></div>
                     </div>
                 </div>
             )}
