@@ -84,7 +84,7 @@ const Index = () => {
     // Authorization State
     const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
     const [pinInput, setPinInput] = useState("");
-    const CORRECT_PIN = "AHESS2026";
+    const CORRECT_PIN = "251203";
 
     useEffect(() => {
         // Cek login status awal
