@@ -196,21 +196,72 @@ const Index = () => {
             return;
         }
         localStorage.setItem('xt_sync_token', syncToken);
-        const dataToSave = {
-            savedConfigs,
-            usedEmails
-        };
+
+        toast.loading("Mempersiapkan penyimpanan aman...", { id: "sync-save" });
+
         try {
+            // 1. Ambil data cloud terlebih dahulu supaya tidak saling timpa
+            let cloudConfigs: SavedConfig[] = [];
+            let cloudUsedEmails: string[] = [];
+
+            try {
+                const loadRes = await fetch('/api/sync/load', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: syncToken })
+                });
+                const loadResult = await loadRes.json();
+                if (loadResult.ok && loadResult.data) {
+                    if (loadResult.data.savedConfigs) cloudConfigs = loadResult.data.savedConfigs;
+                    if (loadResult.data.usedEmails) cloudUsedEmails = loadResult.data.usedEmails;
+                }
+            } catch (e) {
+                // Abaikan error load jika misal token memang masih benar-benar baru
+            }
+
+            // 2. Gabungkan (Merge) data cloud dengan data lokal yang sekarang
+
+            // Merge Configs berdasarkan Gmail
+            const mergedConfigs = [...cloudConfigs];
+            savedConfigs.forEach((localConf) => {
+                const existingIdx = mergedConfigs.findIndex(c => c.gmail === localConf.gmail);
+                if (existingIdx === -1) {
+                    mergedConfigs.push(localConf);
+                } else {
+                    // Update dengan yang lokal jika sudah ada
+                    mergedConfigs[existingIdx] = localConf;
+                }
+            });
+
+            // Merge Emails Unik
+            const mergedUsedEmails = Array.from(new Set([...cloudUsedEmails, ...usedEmails]));
+
+            // 3. Simpan data gabungan tersebut ke Cloud
+            const dataToSave = {
+                savedConfigs: mergedConfigs,
+                usedEmails: mergedUsedEmails
+            };
+
             const res = await fetch('/api/sync/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ token: syncToken, data: dataToSave })
             });
             const result = await res.json();
-            if (result.ok) toast.success(result.msg);
-            else toast.error(result.msg);
+
+            if (result.ok) {
+                // Update tabel lokal dengan hasil gabungan
+                setSavedConfigs(mergedConfigs);
+                localStorage.setItem('xt_saved_configs', JSON.stringify(mergedConfigs));
+
+                setUsedEmails(mergedUsedEmails);
+                localStorage.setItem('xt_used_emails', JSON.stringify(mergedUsedEmails));
+
+                toast.success(result.msg, { id: "sync-save" });
+            }
+            else toast.error(result.msg, { id: "sync-save" });
         } catch (e) {
-            toast.error("Gagal terhubung ke server untuk sync");
+            toast.error("Gagal terhubung ke server untuk sync", { id: "sync-save" });
         }
     };
 
