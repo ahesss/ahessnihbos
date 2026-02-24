@@ -456,8 +456,8 @@ const Index = () => {
                         isMinimal: true
                     });
                     if (!xtSuccessClient(sendOtpData)) throw new Error(xtMsgClient(sendOtpData) || "Gagal kirim OTP");
-                    addLog(`[${acc.email}] 📨 OTP sent! Waiting 10s...`);
-                    await new Promise(r => setTimeout(r, 10000));
+                    addLog(`[${acc.email}] 📨 OTP sent! Waiting 3s...`);
+                    await new Promise(r => setTimeout(r, 3000));
 
                     // 4. Poll for OTP (Max 90s, Backend)
                     updateAccount(id, { status: 'registering', message: 'Mencari OTP di Gmail...' });
@@ -475,7 +475,7 @@ const Index = () => {
                             otpFound = pollData.otp;
                             break;
                         }
-                        await new Promise(r => setTimeout(r, 10000));
+                        await new Promise(r => setTimeout(r, 3000));
                     }
                     if (!otpFound) throw new Error("OTP tidak masuk ke Gmail (Timeout 90s)");
 
