@@ -202,12 +202,26 @@ const Index = () => {
             const result = await res.json();
             if (result.ok && result.data) {
                 if (result.data.savedConfigs) {
-                    setSavedConfigs(result.data.savedConfigs);
-                    localStorage.setItem('xt_saved_configs', JSON.stringify(result.data.savedConfigs));
+                    setSavedConfigs(prev => {
+                        const newConfigs = [...prev];
+                        result.data.savedConfigs.forEach((incoming: SavedConfig) => {
+                            const existingIdx = newConfigs.findIndex(c => c.gmail === incoming.gmail);
+                            if (existingIdx === -1) {
+                                newConfigs.push(incoming);
+                            } else {
+                                newConfigs[existingIdx] = incoming;
+                            }
+                        });
+                        localStorage.setItem('xt_saved_configs', JSON.stringify(newConfigs));
+                        return newConfigs;
+                    });
                 }
                 if (result.data.usedEmails) {
-                    setUsedEmails(result.data.usedEmails);
-                    localStorage.setItem('xt_used_emails', JSON.stringify(result.data.usedEmails));
+                    setUsedEmails(prev => {
+                        const merged = Array.from(new Set([...prev, ...result.data.usedEmails]));
+                        localStorage.setItem('xt_used_emails', JSON.stringify(merged));
+                        return merged;
+                    });
                 }
                 toast.success(result.msg);
             } else {
@@ -552,23 +566,35 @@ const Index = () => {
                     <div className="flex justify-between items-center mb-1">
                         <h3 className="text-[10px] font-bold text-[#777] uppercase tracking-wider">Profil Tersimpan</h3>
                     </div>
-                    {savedConfigs.map((conf, idx) => (
-                        <div key={conf.id} className="bg-[#17171a] p-2 rounded-md border border-[#2c2c2f] hover:border-[#189b4a] transition-colors group cursor-pointer"
-                            onClick={() => {
-                                setGmail(conf.gmail);
-                                setPasswordXT(conf.passXT);
-                                setAppPassword(conf.appPass);
-                                handleSaveActiveForm();
-                                toast.success("Profil dimuat ke form");
-                            }}>
-                            <div className="flex justify-between items-center">
-                                <p className="text-[12px] text-green-400 font-bold truncate flex-1">{conf.gmail}</p>
-                                <button onClick={(e) => { e.stopPropagation(); handleDeleteConfig(conf.id); }} className="text-[#555] hover:text-red-500 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1">
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                </button>
+                    {savedConfigs.map((conf, idx) => {
+                        const base = getBaseEmail(conf.gmail);
+                        const used = usedEmails.filter(e => getBaseEmail(e) === base).length;
+                        const max = calculateMaxVariations(conf.gmail);
+                        const remain = Math.max(0, max - used);
+
+                        return (
+                            <div key={conf.id} className="bg-[#17171a] p-2 rounded-md border border-[#2c2c2f] hover:border-[#189b4a] transition-colors group cursor-pointer"
+                                onClick={() => {
+                                    setGmail(conf.gmail);
+                                    setPasswordXT(conf.passXT);
+                                    setAppPassword(conf.appPass);
+                                    handleSaveActiveForm();
+                                    toast.success("Profil dimuat ke form");
+                                }}>
+                                <div className="flex justify-between items-center">
+                                    <div className="flex flex-col flex-1 truncate">
+                                        <p className="text-[12px] text-green-400 font-bold truncate pr-2">{conf.gmail}</p>
+                                        <p className="text-[10px] text-[#888] mt-0.5">
+                                            Terpakai: <span className="text-green-500 font-bold">{used.toLocaleString()}</span> &nbsp;•&nbsp; Sisa: <span className="text-blue-400 font-bold">{remain.toLocaleString()}</span>
+                                        </p>
+                                    </div>
+                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteConfig(conf.id); }} className="text-[#555] hover:text-red-500 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1 shrink-0">
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        )
+                    })}
                 </div>
             )}
 
