@@ -162,22 +162,79 @@ const Index = () => {
         setLogs(prev => [...prev, `[${time}] ${msg}`]);
     };
 
-    // Fungsi Suara Cepat (Menggunakan Web Audio API atau element Audio ringan)
+    // Fungsi Suara (Menggunakan Web Audio API agar pasti bunyi tanpa block internet/CDN)
     const playSound = (type: 'swoosh' | 'success' | 'error') => {
         if (!audioEnabled) return;
         try {
-            let audioUrl = '';
-            if (type === 'swoosh') {
-                audioUrl = 'https://actions.google.com/sounds/v1/water/air_release.ogg';
-            } else if (type === 'success') {
-                audioUrl = 'https://actions.google.com/sounds/v1/cartoon/bling_sfx.ogg';
-            } else if (type === 'error') {
-                audioUrl = 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg';
+            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+            if (!AudioContextClass) return;
+
+            // Re-use context agar tidak memory leak
+            if (!(window as any).xtAudioCtx) {
+                (window as any).xtAudioCtx = new AudioContextClass();
             }
-            if (audioUrl) {
-                const audio = new Audio(audioUrl);
-                audio.volume = type === 'swoosh' ? 0.2 : 0.5; // Swoosh lebih pelan
-                audio.play().catch(() => { });
+            const ctx: AudioContext = (window as any).xtAudioCtx;
+
+            if (ctx.state === 'suspended') {
+                ctx.resume(); // Atasi kebijakan Autoplay browser
+            }
+
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            const now = ctx.currentTime;
+
+            if (type === 'success') {
+                // Suara Koin (Nada tinggi 1)
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(0.3, now + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+
+                // Nada tinggi 2 menyusul
+                setTimeout(() => {
+                    if (ctx.state === 'suspended') return;
+                    const osc2 = ctx.createOscillator();
+                    const gain2 = ctx.createGain();
+                    osc2.connect(gain2);
+                    gain2.connect(ctx.destination);
+                    osc2.type = 'sine';
+                    osc2.frequency.setValueAtTime(1200, ctx.currentTime);
+                    osc2.frequency.exponentialRampToValueAtTime(1600, ctx.currentTime + 0.1);
+                    gain2.gain.setValueAtTime(0, ctx.currentTime);
+                    gain2.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
+                    gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                    osc2.start(ctx.currentTime);
+                    osc2.stop(ctx.currentTime + 0.3);
+                }, 100);
+
+            } else if (type === 'error') {
+                // Suara Buzzer Error
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(100, now + 0.4);
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(0.3, now + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                osc.start(now);
+                osc.stop(now + 0.4);
+
+            } else if (type === 'swoosh') {
+                // Suara angin (pindah akun)
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(100, now + 0.2);
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(0.1, now + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
             }
         } catch (e) { }
     };
@@ -574,18 +631,27 @@ const Index = () => {
                         return updated;
                     });
 
-                    // Hitung Kecepatan Analitik
+                    // Hitung Kecepatan Analitik dengan state acc paling baru agar startTime tidak undefined
                     const endTime = Date.now();
-                    const durationSec = (endTime - (acc.startTime || endTime)) / 1000;
 
-                    setSessionStats(prev => ({
-                        successCount: prev.successCount + 1,
-                        totalTimeSeconds: prev.totalTimeSeconds + durationSec,
-                        fastestTimeSeconds: Math.min(prev.fastestTimeSeconds, durationSec)
-                    }));
+                    setAccounts(prevAccounts => {
+                        const currentAcc = prevAccounts.find(a => a.id === id);
+                        if (currentAcc && currentAcc.startTime) {
+                            const durationSec = (endTime - currentAcc.startTime) / 1000;
+
+                            setSessionStats(prev => ({
+                                successCount: prev.successCount + 1,
+                                totalTimeSeconds: prev.totalTimeSeconds + durationSec,
+                                fastestTimeSeconds: Math.min(prev.fastestTimeSeconds, durationSec)
+                            }));
+                            addLog(`[${acc.email}] 🔥 ✅ Registered & token! (${durationSec.toFixed(1)}s)`);
+                        } else {
+                            addLog(`[${acc.email}] 🔥 ✅ Registered & token!`);
+                        }
+                        return prevAccounts;
+                    });
 
                     updateAccount(id, { status: 'success', message: `Registered! ID: ${userId}`, userId, endTime });
-                    addLog(`[${acc.email}] 🔥 ✅ Registered & token! (${durationSec.toFixed(1)}s)`);
                     addLog(`[${acc.email}] ℹ️ ${acc.email} disimpan ke database`);
                     playSound('success');
                     toast.success(`${acc.email} terdaftar!`);
