@@ -42,6 +42,8 @@ function generateDotVariations(email: string, count: number): string[] {
 
     const maxVariations = Math.pow(2, chars.length - 1);
     const results = new Set<string>();
+
+    // Safety limit to avoid browser crash on very long emails, but usually up to 15 chars is fine (16k)
     const attempts = Math.min(count, maxVariations);
     let tries = 0;
 
@@ -56,6 +58,15 @@ function generateDotVariations(email: string, count: number): string[] {
     }
     return Array.from(results);
 }
+
+function calculateMaxVariations(email: string): number {
+    const [local] = email.split("@");
+    if (!local) return 0;
+    const chars = local.replace(/\./g, "").split("");
+    if (chars.length <= 1) return 1;
+    return Math.pow(2, chars.length - 1);
+}
+
 const Index = () => {
     const [gmail, setGmail] = useState("");
     const [appPassword, setAppPassword] = useState("");
@@ -504,6 +515,16 @@ const Index = () => {
         return `${local.replace(/\./g, "")}@${domain}`.toLowerCase();
     };
 
+    // Kalkulasi Statistik Dot Trick untuk email yang sedang diketik (gmail)
+    const activeBaseEmail = getBaseEmail(gmail);
+    const maxAvailable = calculateMaxVariations(gmail);
+
+    // Cari berapa akun yang sudah didaftarkan (sukses) khusus untuk base email ini
+    const usedForThisEmail = usedEmails.filter(e => getBaseEmail(e) === activeBaseEmail).length;
+
+    // Berapa sisa yang masih bisa di-generate
+    const remainingAvailable = Math.max(0, maxAvailable - usedForThisEmail);
+
     const successCount = accounts.filter(a => a.status === 'success').length;
     const pendingCount = accounts.filter(a => a.status === 'pending' || a.status === 'error').length;
     const remainingCount = accounts.filter(a => a.status !== 'success').length;
@@ -596,7 +617,7 @@ const Index = () => {
 
                 <div>
                     <label className="text-xs mb-1.5 block text-[#999] font-medium">Gmail</label>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 mb-1.5">
                         <Input
                             value={gmail}
                             onChange={(e) => { setGmail(e.target.value); handleSaveActiveForm(); }}
@@ -611,6 +632,14 @@ const Index = () => {
                             <Save className="w-4 h-4" />
                         </Button>
                     </div>
+                    {/* INDIKATOR DOT TRICK */}
+                    {gmail && gmail.includes("@") && (
+                        <div className="text-[10px] flex justify-between px-1">
+                            <span className="text-[#888]">Variasi: <span className="text-[#ddd]">{maxAvailable.toLocaleString()}</span></span>
+                            <span className="text-green-500">Terpakai/Sukses: <span className="font-bold">{usedForThisEmail.toLocaleString()}</span></span>
+                            <span className="text-blue-400">Sisa: <span className="font-bold">{remainingAvailable.toLocaleString()}</span></span>
+                        </div>
+                    )}
                 </div>
 
                 <div>
@@ -661,15 +690,15 @@ const Index = () => {
                     </Select>
                 </div>
 
-                {/* Stats */}
+                {/* Stats Bawah */}
                 <div className="flex justify-between items-center text-xs pt-1">
                     <p>
-                        <span className="text-yellow-500 font-bold">{successCount} sukses</span>
+                        <span className="text-yellow-500 font-bold">{accounts.length} di antrean</span>
                         <span className="text-[#666]"> • </span>
-                        <span className="text-green-500 font-bold">{remainingCount} sisa</span>
+                        <span className="text-green-500 font-bold">{pendingCount} pending</span>
                     </p>
                     <button onClick={handleResetHistory} className="text-[#777] underline hover:text-white transition-colors">
-                        Reset antrean
+                        Kosongkan antrean
                     </button>
                 </div>
 
