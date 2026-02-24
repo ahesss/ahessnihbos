@@ -387,40 +387,53 @@ app.post('/api/save-account', (req, res) => {
     }
 });
 
-// Sync: Save Data
-app.post('/api/sync/save', (req, res) => {
+// Sync: Save Data (Persistent menggunakan Cloud KV)
+app.post('/api/sync/save', async (req, res) => {
     var token = req.body.token;
     var data = req.body.data;
     if (!token || !data) return res.status(400).json({ ok: false, msg: 'Token & Data required' });
 
     try {
-        // Simple sanitization for filename
         var safeToken = token.replace(/[^a-zA-Z0-9_-]/g, '');
-        var filePath = path.join(SYNC_DIR, `${safeToken}.json`);
-        fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-        res.json({ ok: true, msg: 'Data berhasil disimpan ke cloud!' });
+        if (!safeToken) throw new Error("Gunakan huruf atau angka untuk token");
+
+        // Simpan ke bucket KV gratis yang tidak akan terhapus saat server Railway restart
+        const kvRes = await fetch(`https://kvdb.io/6dv24Ac4GGXp2YSMxnxFL8/${safeToken}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (!kvRes.ok) throw new Error("Gagal menyimpan ke basis data cloud");
+
+        res.json({ ok: true, msg: 'Data berhasil disimpan memori cloud secara permanen!' });
     } catch (e) {
         res.status(500).json({ ok: false, msg: e.message });
     }
 });
 
 // Sync: Load Data
-app.post('/api/sync/load', (req, res) => {
+app.post('/api/sync/load', async (req, res) => {
     var token = req.body.token;
     if (!token) return res.status(400).json({ ok: false, msg: 'Token required' });
 
     try {
         var safeToken = token.replace(/[^a-zA-Z0-9_-]/g, '');
-        var filePath = path.join(SYNC_DIR, `${safeToken}.json`);
-        if (fs.existsSync(filePath)) {
-            var rawData = fs.readFileSync(filePath, 'utf8');
-            var data = JSON.parse(rawData);
-            res.json({ ok: true, data: data, msg: 'Data berhasil dimuat!' });
-        } else {
-            res.json({ ok: false, msg: 'Token tidak ditemukan atau belum ada data tersimpan.' });
+        if (!safeToken) throw new Error("Format token tidak valid");
+
+        const kvRes = await fetch(`https://kvdb.io/6dv24Ac4GGXp2YSMxnxFL8/${safeToken}`);
+
+        if (kvRes.status === 404) {
+            return res.json({ ok: false, msg: 'Token tidak ditemukan atau belum pernah disimpan.' });
         }
+        if (!kvRes.ok) {
+            throw new Error(`Data cloud error (HTTP ${kvRes.status})`);
+        }
+
+        const data = await kvRes.json();
+        res.json({ ok: true, data: data, msg: 'Data berhasil dimuat dari cloud!' });
     } catch (e) {
-        res.status(500).json({ ok: false, msg: e.message });
+        res.status(500).json({ ok: false, msg: 'Gagal mengambil data: ' + e.message });
     }
 });
 
