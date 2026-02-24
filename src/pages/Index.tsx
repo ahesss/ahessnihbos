@@ -188,58 +188,99 @@ const Index = () => {
                 updateAccount(id, { status: 'registering', message: 'Loading OTP & Registering...' });
 
                 try {
-                    const userAgent = navigator.userAgent;
                     // 1. Prepare Headers (Auto-generated Only)
                     let customHeadersObj: any = {};
-
-                    // Fetch auto-generated headers from backend
                     addLog(`[${acc.email}] ðŸ”‘ Generating unique device headers...`);
                     const genRes = await fetch('/api/generate-device-headers');
                     customHeadersObj = await genRes.json();
-                    addLog(`[${acc.email}] âœ… Device identity generated. Waiting 3s...`);
-                    await new Promise(r => setTimeout(r, 3000)); // Initial pause
+                    addLog(`[${acc.email}] âœ… Device identity generated.`);
+                    await new Promise(r => setTimeout(r, 1000));
 
-                    // 2. Validate Captcha
-                    addLog(`[${acc.email}] Validating captcha...`);
+                    // Client-side execution helper
+                    const xtFetchClient = async (urlPath: string, opts: any = {}) => {
+                        const { body, query, method = 'POST', isMinimal = false } = opts;
+                        let token = opts.token;
+
+                        let headers: any = {
+                            'Accept': 'application/json, text/plain, */*'
+                        };
+                        if (body) headers['Content-Type'] = 'application/json';
+
+                        if (urlPath.includes('/acapi/')) {
+                            headers['api-version'] = '2';
+                            headers['xt-host'] = 'www.xtpro.online';
+                        } else {
+                            headers['api-version'] = '4';
+                        }
+                        headers['device'] = 'web';
+
+                        if (token) {
+                            headers['authorization'] = `Bearer ${token}`;
+                            headers['token'] = token;
+                        }
+
+                        if (!isMinimal) {
+                            for (const [key, value] of Object.entries(customHeadersObj)) {
+                                if (value && key !== 'api-version') headers[key] = value as string;
+                            }
+                        }
+
+                        let url = 'https://www.xtpro.online' + urlPath;
+                        if (query) {
+                            const qs = new URLSearchParams(query).toString();
+                            url += '?' + qs;
+                        }
+
+                        const res = await fetch(url, {
+                            method,
+                            headers,
+                            body: body && method !== 'GET' ? JSON.stringify(body) : undefined
+                        });
+                        const text = await res.text();
+                        try { return { ...JSON.parse(text), _httpStatus: res.status }; }
+                        catch (e) { return { rc: -1, _httpStatus: res.status, mc: text }; }
+                    };
+
+                    const xtSuccessClient = (data: any) => data?.rc === 0 || data?.rc === '0' || data?.code === 0 || data?.code === '0' || data?.returnCode === 0 || data?.returnCode === '0' || data?._httpStatus === 200;
+                    const xtMsgClient = (data: any) => data?.mc || data?.msg || data?.message || data?.desc || JSON.stringify(data);
+
+                    // 2. Validate Captcha (Directly to XT)
+                    addLog(`[${acc.email}] Validating captcha via Client...`);
                     updateAccount(id, { status: 'registering', message: 'Validating Captcha...' });
-                    let capRes = await fetch('/api/validate-captcha', {
+                    let capData = await xtFetchClient('/xt-app/public/captcha/validate', {
+                        query: {
+                            data: JSON.stringify({
+                                lot_number: result.lot_number,
+                                captcha_output: result.captcha_output,
+                                pass_token: result.pass_token,
+                                gen_time: result.gen_time
+                            }), type: '2'
+                        },
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            captchaResult: result,
-                            customHeaders: customHeadersObj,
-                            userAgent: userAgent
-                        })
+                        isMinimal: true
                     });
-                    let capData = await capRes.json();
-                    if (!capData.ok || !capData.certificate) throw new Error(capData.msg || "Gagal validasi captcha");
+                    if (!capData.data?.certificate) throw new Error(xtMsgClient(capData) || "Gagal validasi captcha. (Pastikan ekstensi Bypass CORS aktif!)");
 
-                    addLog(`[${acc.email}] âœ… Captcha validated. pausing 8s for security...`);
-                    await new Promise(r => setTimeout(r, 8000)); // Large human pause
+                    addLog(`[${acc.email}] âœ… Captcha validated.`);
+                    await new Promise(r => setTimeout(r, 2000));
 
-                    // 3. Send OTP
-                    addLog(`[${acc.email}] ðŸ”¥ Sending OTP code...`);
+                    // 3. Send OTP (Directly to XT)
+                    addLog(`[${acc.email}] ðŸ”¥ Sending OTP code via Client...`);
                     updateAccount(id, { status: 'registering', message: 'Mengirim OTP...' });
-                    let sendRes = await fetch('/api/send-otp', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            email: acc.email,
-                            certificate: capData.certificate,
-                            customHeaders: customHeadersObj,
-                            userAgent: userAgent
-                        })
+                    let sendOtpData = await xtFetchClient('/uaapi/user/msg/doSendCode', {
+                        query: { codeType: '101', apiKey: 'regist' },
+                        body: { codeType: '101', receiveAddress: acc.email.trim(), puzzleValidateString: capData.data.certificate, regChannel: 'regist' },
+                        isMinimal: true
                     });
-                    let sendData = await sendRes.json();
-                    if (!sendData.ok) throw new Error(sendData.msg || "Gagal kirim OTP");
-                    addLog(`[${acc.email}] ðŸ“¨ OTP sent! Cooling down 10s before search...`);
-                    await new Promise(r => setTimeout(r, 10000)); // Wait for email delivery
+                    if (!xtSuccessClient(sendOtpData)) throw new Error(xtMsgClient(sendOtpData) || "Gagal kirim OTP");
+                    addLog(`[${acc.email}] ðŸ“¨ OTP sent! Waiting 10s...`);
+                    await new Promise(r => setTimeout(r, 10000));
 
-                    // 4. Poll for OTP (Max 60s)
+                    // 4. Poll for OTP (Max 90s, Backend)
                     updateAccount(id, { status: 'registering', message: 'Mencari OTP di Gmail...' });
                     let otpFound: string | null = null;
                     const startTime = Date.now();
-                    while (!otpFound && (Date.now() - startTime) < 90000) { // Extended timeout
+                    while (!otpFound && (Date.now() - startTime) < 90000) {
                         addLog(`[${acc.email}] ðŸ” Searching for OTP...`);
                         let pollRes = await fetch('/api/fetch-otp', {
                             method: 'POST',
@@ -249,43 +290,58 @@ const Index = () => {
                         let pollData = await pollRes.json();
                         if (pollData.ok && pollData.otp) {
                             otpFound = pollData.otp;
-                            addLog(`[${acc.email}] ðŸ”¥ OTP Found: ${otpFound}. pausing 5s...`);
-                            await new Promise(r => setTimeout(r, 5000)); // Final pause before register
                             break;
                         }
-                        await new Promise(r => setTimeout(r, 10000)); // Slow poll every 10s
+                        await new Promise(r => setTimeout(r, 10000));
                     }
+                    if (!otpFound) throw new Error("OTP tidak masuk ke Gmail (Timeout 90s)");
 
-                    if (!otpFound) throw new Error("OTP tidak masuk ke Gmail (Timeout 60s)");
-
-                    // 5. Complete Register
-                    addLog(`[${acc.email}] ðŸš€ Registering account...`);
+                    // 5. Complete Register (Directly to XT)
+                    addLog(`[${acc.email}] ðŸš€ Registering account via Client...`);
                     updateAccount(id, { status: 'registering', message: 'Selesaikan pendaftaran...' });
-                    let finalRes = await fetch('/api/complete-register', {
+
+                    let keyData = await xtFetchClient('/uaapi/uaa/authorize/passwd/publicKey', { method: 'POST', isMinimal: true });
+                    if (!keyData?.data?.publicKey) throw new Error("Gagal mengambil public key");
+
+                    let encRes = await fetch('/api/encrypt', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            email: acc.email,
-                            password: acc.passwordXT,
-                            otp: otpFound,
-                            refCode: acc.referralCode || 'AKNSZM',
-                            customHeaders: customHeadersObj,
-                            userAgent: userAgent
-                        })
+                        body: JSON.stringify({ password: acc.passwordXT, publicKey: keyData.data.publicKey })
                     });
-                    let finalData = await finalRes.json();
+                    let encData = await encRes.json();
+                    if (!encData.ok) throw new Error("Gagal encrypt password");
 
-                    if (finalData.ok) {
-                        updateAccount(id, {
-                            status: 'success',
-                            message: `Registered! ID: ${finalData.userId}`,
-                            userId: finalData.userId
-                        });
-                        addLog(`[${acc.email}] âœ… SUCCESS! Account registered & Event joined.`);
-                        toast.success(`${acc.email} terdaftar!`);
-                    } else {
-                        throw new Error(finalData.msg || "Gagal pendaftaran akhir");
-                    }
+                    let regData = await xtFetchClient('/uaapi/user/v2/reg', {
+                        body: {
+                            userName: acc.email.trim(),
+                            countryCode: '',
+                            dynamicCode: otpFound.trim(),
+                            loginPwd: encData.encrypted,
+                            passwdId: keyData.data.passwdId,
+                            recommendCode: acc.referralCode || 'AKNSZM',
+                            regChannel: 'regist',
+                            apiKey: 'regist'
+                        }
+                    });
+
+                    if (!xtSuccessClient(regData)) throw new Error("Gagal mendaftar: " + xtMsgClient(regData));
+
+                    let userId = regData?.data?.userId || regData?.data?.uid || '';
+                    let token = regData?.data?.accessToken || '';
+
+                    // Save to DB
+                    await fetch('/api/save-account', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: acc.email, password: acc.passwordXT, userId, refCode: acc.referralCode, token })
+                    });
+
+                    // Join Event
+                    await xtFetchClient('/acapi/general/activity/apply/999999999999991', { token });
+
+                    updateAccount(id, { status: 'success', message: `Registered! ID: ${userId}`, userId });
+                    addLog(`[${acc.email}] âœ… SUCCESS! Account registered.`);
+                    toast.success(`${acc.email} terdaftar!`);
                 } catch (e: any) {
                     updateAccount(id, { status: 'error', message: e.message });
                     addLog(`[ERROR] ${acc.email}: ${e.message}`);
