@@ -398,9 +398,9 @@ app.post('/api/sync/save', async (req, res) => {
         if (!safeToken) throw new Error("Gunakan huruf atau angka untuk token");
 
         // Simpan ke bucket KV gratis yang tidak akan terhapus saat server Railway restart
-        const kvRes = await fetch(`https://kvdb.io/6dv24Ac4GGXp2YSMxnxFL8/${safeToken}`, {
+        const kvRes = await fetch(`https://textdb.dev/api/data/ahess-${safeToken}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'content-type': 'text/plain' },
             body: JSON.stringify(data)
         });
 
@@ -421,16 +421,21 @@ app.post('/api/sync/load', async (req, res) => {
         var safeToken = token.replace(/[^a-zA-Z0-9_-]/g, '');
         if (!safeToken) throw new Error("Format token tidak valid");
 
-        const kvRes = await fetch(`https://kvdb.io/6dv24Ac4GGXp2YSMxnxFL8/${safeToken}`);
+        const kvRes = await fetch(`https://textdb.dev/api/data/ahess-${safeToken}`);
 
-        if (kvRes.status === 404) {
+        if (kvRes.status === 404 || kvRes.status === 400) {
             return res.json({ ok: false, msg: 'Token tidak ditemukan atau belum pernah disimpan.' });
         }
         if (!kvRes.ok) {
             throw new Error(`Data cloud error (HTTP ${kvRes.status})`);
         }
 
-        const data = await kvRes.json();
+        const textData = await kvRes.text();
+        if (!textData) {
+            return res.json({ ok: false, msg: 'Token kosong' });
+        }
+
+        const data = JSON.parse(textData);
         res.json({ ok: true, data: data, msg: 'Data berhasil dimuat dari cloud!' });
     } catch (e) {
         res.status(500).json({ ok: false, msg: 'Gagal mengambil data: ' + e.message });
