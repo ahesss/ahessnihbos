@@ -21,6 +21,11 @@ app.use(express.json());
 // Serve the Vite dist folder in production, or just let Vite handle it in dev
 app.use(express.static(path.join(__dirname, 'dist')));
 
+const SYNC_DIR = path.join(__dirname, 'sync_data');
+if (!fs.existsSync(SYNC_DIR)) {
+    fs.mkdirSync(SYNC_DIR);
+}
+
 function generateDeviceHeaders() {
     // Generate IDs that look like real browser/app IDs
     const deviceId = crypto.randomUUID().replace(/-/g, '');
@@ -377,6 +382,43 @@ app.post('/api/save-account', (req, res) => {
     try {
         fs.appendFileSync(ACCOUNTS_FILE, `${email}|${password}|${userId || ''}|${refCode || ''}|${new Date().toISOString()}|${token || ''}\n`);
         res.json({ ok: true });
+    } catch (e) {
+        res.status(500).json({ ok: false, msg: e.message });
+    }
+});
+
+// Sync: Save Data
+app.post('/api/sync/save', (req, res) => {
+    var token = req.body.token;
+    var data = req.body.data;
+    if (!token || !data) return res.status(400).json({ ok: false, msg: 'Token & Data required' });
+
+    try {
+        // Simple sanitization for filename
+        var safeToken = token.replace(/[^a-zA-Z0-9_-]/g, '');
+        var filePath = path.join(SYNC_DIR, `${safeToken}.json`);
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+        res.json({ ok: true, msg: 'Data berhasil disimpan ke cloud!' });
+    } catch (e) {
+        res.status(500).json({ ok: false, msg: e.message });
+    }
+});
+
+// Sync: Load Data
+app.post('/api/sync/load', (req, res) => {
+    var token = req.body.token;
+    if (!token) return res.status(400).json({ ok: false, msg: 'Token required' });
+
+    try {
+        var safeToken = token.replace(/[^a-zA-Z0-9_-]/g, '');
+        var filePath = path.join(SYNC_DIR, `${safeToken}.json`);
+        if (fs.existsSync(filePath)) {
+            var rawData = fs.readFileSync(filePath, 'utf8');
+            var data = JSON.parse(rawData);
+            res.json({ ok: true, data: data, msg: 'Data berhasil dimuat!' });
+        } else {
+            res.json({ ok: false, msg: 'Token tidak ditemukan atau belum ada data tersimpan.' });
+        }
     } catch (e) {
         res.status(500).json({ ok: false, msg: e.message });
     }
