@@ -450,8 +450,8 @@ const Index = () => {
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-[#aaa]">
                         <div className="truncate"><span className="text-[#555]">Gmail:</span> <span className="text-green-400">{savedGmail}</span></div>
-                        <div className="truncate"><span className="text-[#555]">Pass XT:</span> {localStorage.getItem('xt_saved_pass') ? 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢' : '-'}</div>
-                        <div className="truncate"><span className="text-[#555]">App Pass:</span> {localStorage.getItem('xt_saved_app') ? 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢' : '-'}</div>
+                        <div className="truncate"><span className="text-[#555]">Pass XT:</span> {localStorage.getItem('xt_saved_pass') ? '********' : '-'}</div>
+                        <div className="truncate"><span className="text-[#555]">App Pass:</span> {localStorage.getItem('xt_saved_app') ? '********' : '-'}</div>
                         <div className="truncate"><span className="text-[#555]">Ref:</span> <span className="text-yellow-400">{localStorage.getItem('xt_saved_ref')}</span></div>
                     </div>
                 </div>
@@ -526,11 +526,13 @@ const Index = () => {
                 {/* Stats */}
                 <div className="flex justify-between items-center text-xs pt-1">
                     <p>
-                        <span className="text-green-500 font-bold">{availableCount} tersedia</span>
-                        <span className="text-[#666]"> â€¢ {totalGeneratedEmail} di antrian</span>
+                        <span className="text-yellow-500 font-bold">{usedEmails.length} sukses daftar</span>
+                        <span className="text-[#666]"> â€¢ </span>
+                        <span className="text-green-500 font-bold">{availableCount} variasi sisa</span>
+                        <span className="text-[#666]"> â€¢ {totalGeneratedEmail} di antrean</span>
                     </p>
                     <button onClick={handleResetHistory} className="text-[#777] underline hover:text-white transition-colors">
-                        Reset history
+                        Reset antrean
                     </button>
                 </div>
 
