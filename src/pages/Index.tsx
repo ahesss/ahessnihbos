@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shuffle, Trash2, ClipboardCopy, Play, CheckCircle2, ShieldCheck, User, Bot, Globe } from "lucide-react";
+import { Shuffle, Trash2, ClipboardCopy, Play, CheckCircle2, ShieldCheck, User, Bot, Globe, Eye, EyeOff, Save } from "lucide-react";
 import { toast } from "sonner";
 
 declare global {
@@ -24,6 +24,14 @@ interface AccountEntry {
     status: AccountStatus;
     message?: string;
     userId?: string;
+}
+
+interface SavedConfig {
+    id: string;
+    gmail: string;
+    passXT: string;
+    appPass: string;
+    refCode: string;
 }
 
 function generateDotVariations(email: string, count: number): string[] {
@@ -49,7 +57,6 @@ function generateDotVariations(email: string, count: number): string[] {
     return Array.from(results);
 }
 const Index = () => {
-    const [savedGmail, setSavedGmail] = useState("");
     const [gmail, setGmail] = useState("");
     const [appPassword, setAppPassword] = useState("");
     const [passwordXT, setPasswordXT] = useState("");
@@ -60,13 +67,37 @@ const Index = () => {
     const [logs, setLogs] = useState<string[]>([]);
     const [serverIp, setServerIp] = useState("Loading IP...");
     const [usedEmails, setUsedEmails] = useState<string[]>([]);
+    const [savedConfigs, setSavedConfigs] = useState<SavedConfig[]>([]);
+    const [visibleAppPassIdx, setVisibleAppPassIdx] = useState<number | null>(null);
 
     useEffect(() => {
-        setSavedGmail(localStorage.getItem('xt_saved_gmail') || '');
-        setPasswordXT(localStorage.getItem('xt_saved_pass') || 'Dicoba@11');
-        setReferralCode(localStorage.getItem('xt_saved_ref') || '');
-        setAppPassword(localStorage.getItem('xt_saved_app') || '');
+        // Load persist form data
+        setGmail(localStorage.getItem('xt_active_gmail') || '');
+        setPasswordXT(localStorage.getItem('xt_active_pass') || 'Dicoba@11');
+        setReferralCode(localStorage.getItem('xt_active_ref') || '');
+        setAppPassword(localStorage.getItem('xt_active_app') || '');
+
+        // Load arrays
         setUsedEmails(JSON.parse(localStorage.getItem('xt_used_emails') || '[]'));
+        setSavedConfigs(JSON.parse(localStorage.getItem('xt_saved_configs') || '[]'));
+
+        // Load configs from old version if they exist, then clear old keys
+        const oldSavedGmail = localStorage.getItem('xt_saved_gmail');
+        if (oldSavedGmail) {
+            const oldConf: SavedConfig = {
+                id: Math.random().toString(36).substring(7),
+                gmail: oldSavedGmail,
+                passXT: localStorage.getItem('xt_saved_pass') || '',
+                appPass: localStorage.getItem('xt_saved_app') || '',
+                refCode: localStorage.getItem('xt_saved_ref') || ''
+            };
+            setSavedConfigs([oldConf]);
+            localStorage.setItem('xt_saved_configs', JSON.stringify([oldConf]));
+            localStorage.removeItem('xt_saved_gmail');
+            localStorage.removeItem('xt_saved_pass');
+            localStorage.removeItem('xt_saved_app');
+            localStorage.removeItem('xt_saved_ref');
+        }
 
         // Fetch Client IP directly from browser
         fetch('https://api.ipify.org?format=json')
@@ -83,25 +114,46 @@ const Index = () => {
         setLogs(prev => [...prev, `[${time}] ${msg}`]);
     };
 
-    const handleSaveGmail = () => {
-        if (gmail) {
-            setSavedGmail(gmail);
-            localStorage.setItem('xt_saved_gmail', gmail);
-            localStorage.setItem('xt_saved_pass', passwordXT);
-            localStorage.setItem('xt_saved_ref', referralCode);
-            localStorage.setItem('xt_saved_app', appPassword);
-            toast.success("Pengaturan tersimpan");
-        }
+    // Auto-save form inputs to active cache so they don't disappear on refresh
+    const handleSaveActiveForm = () => {
+        localStorage.setItem('xt_active_gmail', gmail);
+        localStorage.setItem('xt_active_pass', passwordXT);
+        localStorage.setItem('xt_active_ref', referralCode);
+        localStorage.setItem('xt_active_app', appPassword);
     };
 
-    const handleDeleteSaved = () => {
-        setSavedGmail("");
-        localStorage.removeItem('xt_saved_gmail');
-        toast("Gmail dihapus");
+    // Save as a permanent configuration profile
+    const handleSaveConfig = () => {
+        if (!gmail) {
+            toast.error("Gmail tidak boleh kosong");
+            return;
+        }
+        setSavedConfigs(prev => {
+            const newConf: SavedConfig = {
+                id: Math.random().toString(36).substring(7),
+                gmail,
+                passXT: passwordXT,
+                appPass: appPassword,
+                refCode: referralCode
+            };
+            const updated = [...prev, newConf];
+            localStorage.setItem('xt_saved_configs', JSON.stringify(updated));
+            return updated;
+        });
+        toast.success("Profil tersimpan!");
+    };
+
+    const handleDeleteConfig = (id: string) => {
+        setSavedConfigs(prev => {
+            const updated = prev.filter(c => c.id !== id);
+            localStorage.setItem('xt_saved_configs', JSON.stringify(updated));
+            return updated;
+        });
+        toast("Profil dihapus");
     };
 
     const handleGenerate = () => {
-        const emailToUse = gmail || savedGmail;
+        const emailToUse = gmail;
         if (!emailToUse || !emailToUse.includes("@")) {
             toast.error("Masukkan email yang valid");
             return;
@@ -430,30 +482,47 @@ const Index = () => {
                 </div>
             </div>
 
-            {/* Saved Configuration */}
-            {savedGmail && (
-                <div
-                    className="mb-5 bg-[#17171a] p-3 rounded-lg border border-[#2c2c2f] cursor-pointer hover:border-[#189b4a] transition-colors"
-                    onClick={() => {
-                        setGmail(savedGmail);
-                        setPasswordXT(localStorage.getItem('xt_saved_pass') || '');
-                        setReferralCode(localStorage.getItem('xt_saved_ref') || '');
-                        setAppPassword(localStorage.getItem('xt_saved_app') || '');
-                        toast.success("Data berhasil dimuat ke form");
-                    }}
-                >
-                    <div className="flex justify-between items-start mb-2">
-                        <p className="text-xs text-[#777] font-semibold">Saved Configuration (Klik untuk memuat):</p>
-                        <button onClick={(e) => { e.stopPropagation(); handleDeleteSaved(); }} className="text-[#a1a1aa] hover:text-red-500 transition-colors">
-                            <Trash2 className="w-4 h-4" />
-                        </button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-[#aaa]">
-                        <div className="truncate"><span className="text-[#555]">Gmail:</span> <span className="text-green-400">{savedGmail}</span></div>
-                        <div className="truncate"><span className="text-[#555]">Pass XT:</span> {localStorage.getItem('xt_saved_pass') ? '********' : '-'}</div>
-                        <div className="truncate"><span className="text-[#555]">App Pass:</span> {localStorage.getItem('xt_saved_app') ? '********' : '-'}</div>
-                        <div className="truncate"><span className="text-[#555]">Ref:</span> <span className="text-yellow-400">{localStorage.getItem('xt_saved_ref')}</span></div>
-                    </div>
+            {/* Saved Configurations List */}
+            {savedConfigs.length > 0 && (
+                <div className="mb-6 space-y-3">
+                    <h3 className="text-xs font-bold text-[#777] uppercase tracking-wider">Profil Tersimpan</h3>
+                    {savedConfigs.map((conf, idx) => (
+                        <div key={conf.id} className="bg-[#17171a] p-3 rounded-lg border border-[#2c2c2f] hover:border-[#189b4a] transition-colors group cursor-pointer"
+                            onClick={() => {
+                                setGmail(conf.gmail);
+                                setPasswordXT(conf.passXT);
+                                setReferralCode(conf.refCode);
+                                setAppPassword(conf.appPass);
+                                handleSaveActiveForm();
+                                toast.success("Profil dimuat ke form");
+                            }}>
+                            <div className="flex justify-between items-start mb-2">
+                                <p className="text-xs text-green-400 font-bold truncate flex-1">{conf.gmail}</p>
+                                <button onClick={(e) => { e.stopPropagation(); handleDeleteConfig(conf.id); }} className="text-[#555] hover:text-red-500 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1">
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-[11px] font-mono text-[#aaa]">
+                                <div className="truncate"><span className="text-[#555]">XT:</span> {conf.passXT ? '********' : '-'}</div>
+                                <div className="truncate"><span className="text-[#555]">Ref:</span> <span className="text-yellow-400">{conf.refCode || '-'}</span></div>
+                                <div className="truncate flex items-center gap-1.5 col-span-2">
+                                    <span className="text-[#555]">App:</span>
+                                    <span>{visibleAppPassIdx === idx ? conf.appPass : (conf.appPass ? '********' : '-')}</span>
+                                    {conf.appPass && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setVisibleAppPassIdx(visibleAppPassIdx === idx ? null : idx);
+                                            }}
+                                            className="ml-auto text-[#666] hover:text-white mr-1"
+                                        >
+                                            {visibleAppPassIdx === idx ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             )}
 
@@ -464,26 +533,29 @@ const Index = () => {
                     <div className="flex gap-2">
                         <Input
                             value={gmail}
-                            onChange={(e) => setGmail(e.target.value)}
+                            onChange={(e) => { setGmail(e.target.value); handleSaveActiveForm(); }}
                             placeholder="example@gmail.com"
                             className="bg-[#121214] border-[#2c2c2f] text-white flex-1 focus-visible:ring-1 focus-visible:ring-green-500 focus-visible:border-green-500 h-10"
-                            onBlur={handleSaveGmail}
+                            onBlur={handleSaveActiveForm}
                         />
-                        <Button variant="outline" size="icon" onClick={handleSaveGmail} className="bg-green-600 hover:bg-green-700 border-none text-white h-10 w-10 shrink-0">
+                        <Button variant="outline" size="icon" onClick={() => { navigator.clipboard.writeText(gmail); toast.success("Disalin"); }} className="bg-[#1f1f22] hover:bg-[#2c2c2f] border-[#333] text-white h-10 w-10 shrink-0" title="Copy">
                             <ClipboardCopy className="w-4 h-4" />
+                        </Button>
+                        <Button variant="outline" size="icon" onClick={handleSaveConfig} className="bg-blue-600 hover:bg-blue-700 border-none text-white h-10 w-10 shrink-0" title="Simpan sebagai Profil">
+                            <Save className="w-4 h-4" />
                         </Button>
                     </div>
                 </div>
 
                 <div>
-                    <label className="text-xs mb-1.5 block text-[#999] font-medium">App Password (wajib untuk IMAP OTP)</label>
+                    <label className="text-xs mb-1.5 block text-[#999] font-medium">App Password (untuk OTP)</label>
                     <Input
                         type="password"
                         value={appPassword}
-                        onChange={(e) => setAppPassword(e.target.value)}
+                        onChange={(e) => { setAppPassword(e.target.value); handleSaveActiveForm(); }}
                         placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                         className="bg-[#121214] border-[#2c2c2f] text-white focus-visible:ring-1 focus-visible:ring-green-500 focus-visible:border-green-500 h-10 font-mono tracking-widest text-lg"
-                        onBlur={handleSaveGmail}
+                        onBlur={handleSaveActiveForm}
                     />
                 </div>
 
@@ -491,10 +563,10 @@ const Index = () => {
                     <label className="text-xs mb-1.5 block text-[#999] font-medium">Password XT</label>
                     <Input
                         value={passwordXT}
-                        onChange={(e) => setPasswordXT(e.target.value)}
+                        onChange={(e) => { setPasswordXT(e.target.value); handleSaveActiveForm(); }}
                         placeholder="Password untuk akun XT"
                         className="bg-[#121214] border-[#2c2c2f] text-white focus-visible:ring-1 focus-visible:ring-green-500 focus-visible:border-green-500 h-10"
-                        onBlur={handleSaveGmail}
+                        onBlur={handleSaveActiveForm}
                     />
                 </div>
 
@@ -502,10 +574,10 @@ const Index = () => {
                     <label className="text-xs mb-1.5 block text-[#999] font-medium">Referral Code</label>
                     <Input
                         value={referralCode}
-                        onChange={(e) => setReferralCode(e.target.value)}
+                        onChange={(e) => { setReferralCode(e.target.value); handleSaveActiveForm(); }}
                         placeholder="REFCODE"
                         className="bg-[#121214] border-[#2c2c2f] text-white focus-visible:ring-1 focus-visible:ring-green-500 focus-visible:border-green-500 h-10"
-                        onBlur={handleSaveGmail}
+                        onBlur={handleSaveActiveForm}
                     />
                 </div>
 
@@ -611,7 +683,7 @@ const Index = () => {
                     <Play className="w-4 h-4 mr-2" />
                     Start Batch ({pendingCount})
                 </Button>
-                <div className="max-h-[150px] overflow-y-auto bg-[#0a0a0b] p-3 rounded-md font-mono text-[11px] text-[#888] flex flex-col-reverse border border-[#222]">
+                <div className="max-h-[300px] overflow-y-auto bg-[#0a0a0b] p-3 rounded-md font-mono text-[11px] text-[#888] flex flex-col-reverse border border-[#222]">
                     {logs.slice().reverse().map((log, i) => (
                         <div key={i} className={`whitespace-pre-wrap mb-1 ${log.includes('[SUCCESS]') ? 'text-green-400' : log.includes('[ERROR]') ? 'text-red-400' : ''}`}>{log}</div>
                     ))}
