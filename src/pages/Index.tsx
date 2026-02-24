@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shuffle, Trash2, ClipboardCopy, Play, CheckCircle2, ShieldCheck, User, Bot, Globe, Eye, EyeOff, Save, CloudUpload, CloudDownload, KeyRound } from "lucide-react";
+import { Shuffle, Trash2, ClipboardCopy, Play, CheckCircle2, ShieldCheck, User, Bot, Globe, Eye, EyeOff, Save, CloudUpload, CloudDownload, KeyRound, Activity, Clock, Zap, Target } from "lucide-react";
 import { toast } from "sonner";
 
 declare global {
@@ -24,6 +24,8 @@ interface AccountEntry {
     status: AccountStatus;
     message?: string;
     userId?: string;
+    startTime?: number; // Untuk hitung kecepatan
+    endTime?: number;
 }
 
 interface SavedConfig {
@@ -80,6 +82,14 @@ const Index = () => {
     const [savedConfigs, setSavedConfigs] = useState<SavedConfig[]>([]);
     const [visibleAppPassIdx, setVisibleAppPassIdx] = useState<number | null>(null);
     const [syncToken, setSyncToken] = useState<string>(localStorage.getItem('xt_sync_token') || '');
+    const [audioEnabled, setAudioEnabled] = useState<boolean>(true); // Bebas matikan/hidupkan suara
+
+    // Analitik
+    const [sessionStats, setSessionStats] = useState({
+        successCount: 0,
+        totalTimeSeconds: 0, // Total waktu untuk semua akun sukses di sesi ini
+        fastestTimeSeconds: 999
+    });
 
     // Authorization State
     const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
@@ -150,6 +160,26 @@ const Index = () => {
     const addLog = (msg: string) => {
         const time = new Date().toLocaleTimeString('id-ID', { hour12: false });
         setLogs(prev => [...prev, `[${time}] ${msg}`]);
+    };
+
+    // Fungsi Suara Cepat (Menggunakan Web Audio API atau element Audio ringan)
+    const playSound = (type: 'swoosh' | 'success' | 'error') => {
+        if (!audioEnabled) return;
+        try {
+            let audioUrl = '';
+            if (type === 'swoosh') {
+                audioUrl = 'https://actions.google.com/sounds/v1/water/air_release.ogg';
+            } else if (type === 'success') {
+                audioUrl = 'https://actions.google.com/sounds/v1/cartoon/bling_sfx.ogg';
+            } else if (type === 'error') {
+                audioUrl = 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg';
+            }
+            if (audioUrl) {
+                const audio = new Audio(audioUrl);
+                audio.volume = type === 'swoosh' ? 0.2 : 0.5; // Swoosh lebih pelan
+                audio.play().catch(() => { });
+            }
+        } catch (e) { }
     };
 
     // Auto-save form inputs to active cache so they don't disappear on refresh
@@ -356,8 +386,9 @@ const Index = () => {
         const acc = accounts.find(a => a.id === id);
         if (!acc) return;
 
-        updateAccount(id, { status: 'solving', message: 'Selesaikan Captcha...' });
+        updateAccount(id, { status: 'solving', message: 'Selesaikan Captcha...', startTime: Date.now() });
         addLog(`[${acc.email}] Membuka panel Captcha...`);
+        playSound('swoosh');
 
         window.initGeetest4({
             captchaId: "f6cb1abffdcdf0b30659fd3bb4c0e929",
@@ -543,13 +574,25 @@ const Index = () => {
                         return updated;
                     });
 
-                    updateAccount(id, { status: 'success', message: `Registered! ID: ${userId}`, userId });
-                    addLog(`[${acc.email}] 🔥 ✅ Registered & token!`);
+                    // Hitung Kecepatan Analitik
+                    const endTime = Date.now();
+                    const durationSec = (endTime - (acc.startTime || endTime)) / 1000;
+
+                    setSessionStats(prev => ({
+                        successCount: prev.successCount + 1,
+                        totalTimeSeconds: prev.totalTimeSeconds + durationSec,
+                        fastestTimeSeconds: Math.min(prev.fastestTimeSeconds, durationSec)
+                    }));
+
+                    updateAccount(id, { status: 'success', message: `Registered! ID: ${userId}`, userId, endTime });
+                    addLog(`[${acc.email}] 🔥 ✅ Registered & token! (${durationSec.toFixed(1)}s)`);
                     addLog(`[${acc.email}] ℹ️ ${acc.email} disimpan ke database`);
+                    playSound('success');
                     toast.success(`${acc.email} terdaftar!`);
                 } catch (e: any) {
-                    updateAccount(id, { status: 'error', message: e.message });
+                    updateAccount(id, { status: 'error', message: e.message, endTime: Date.now() });
                     addLog(`[ERROR] ${acc.email}: ${e.message}`);
+                    playSound('error');
                     toast.error(`Gagal: ${e.message}`);
                 } finally {
                     // Trigger next in queue automatically almost instantly
@@ -652,6 +695,40 @@ const Index = () => {
                 <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-[#17171a] border border-[#2c2c2f] rounded-full px-2.5 py-1">
                     <Globe className="w-3 h-3 text-green-500" />
                     <span className="text-[10px] font-mono text-[#aaa]">{serverIp}</span>
+                </div>
+                {/* Toggle Suara - Kiri atas */}
+                <button
+                    onClick={() => setAudioEnabled(!audioEnabled)}
+                    className="absolute top-2 left-2 flex items-center justify-center bg-[#17171a] border border-[#2c2c2f] hover:bg-[#2c2c2f] rounded-full w-7 h-7 transition-colors"
+                    title={audioEnabled ? "Matikan Suara" : "Hidupkan Suara"}
+                >
+                    <span className="text-[14px]">{audioEnabled ? "🔊" : "🔇"}</span>
+                </button>
+            </div>
+
+            {/* ANALYTICS DASHBOARD MINI */}
+            <div className="mb-4 grid grid-cols-3 gap-2">
+                <div className="bg-[#17171a] border border-[#2c2c2f] rounded-xl p-2.5 flex flex-col items-center justify-center text-center relative overflow-hidden group">
+                    <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-green-500/0 via-green-500 to-green-500/0 opacity-50"></div>
+                    <Target className="w-4 h-4 text-green-500 mb-1 opacity-80" />
+                    <span className="text-[10px] text-[#777] font-bold uppercase tracking-wider mb-0.5">Sukses Sesi Ini</span>
+                    <span className="text-xl font-black text-[#ececec]">{sessionStats.successCount}</span>
+                </div>
+                <div className="bg-[#17171a] border border-[#2c2c2f] rounded-xl p-2.5 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                    <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-blue-500/0 via-blue-500 to-blue-500/0 opacity-50"></div>
+                    <Clock className="w-4 h-4 text-blue-500 mb-1 opacity-80" />
+                    <span className="text-[10px] text-[#777] font-bold uppercase tracking-wider mb-0.5">Rata-Rata Waktu</span>
+                    <span className="text-xl font-black text-[#ececec]">
+                        {sessionStats.successCount > 0 ? (sessionStats.totalTimeSeconds / sessionStats.successCount).toFixed(1) : "0.0"}<span className="text-xs text-[#666] ml-0.5">s</span>
+                    </span>
+                </div>
+                <div className="bg-[#17171a] border border-[#2c2c2f] rounded-xl p-2.5 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                    <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-yellow-500/0 via-yellow-500 to-yellow-500/0 opacity-50"></div>
+                    <Zap className="w-4 h-4 text-yellow-500 mb-1 opacity-80" />
+                    <span className="text-[10px] text-[#777] font-bold uppercase tracking-wider mb-0.5">Rekor Tercepat</span>
+                    <span className="text-xl font-black text-[#ececec]">
+                        {sessionStats.fastestTimeSeconds !== 999 ? sessionStats.fastestTimeSeconds.toFixed(1) : "0.0"}<span className="text-xs text-[#666] ml-0.5">s</span>
+                    </span>
                 </div>
             </div>
 
