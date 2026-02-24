@@ -344,8 +344,23 @@ const Index = () => {
                         body: JSON.stringify({ email: acc.email, password: acc.passwordXT, userId, refCode: acc.referralCode, token })
                     });
 
-                    // Join Event
-                    await xtFetchClient('/acapi/general/activity/apply/999999999999991', { token });
+                    // Join Event & Draw List
+                    addLog(`[${acc.email}] â„¹ï¸ Auto-joining event dengan ref=none...`);
+                    // First Apply
+                    let applyRes = await xtFetchClient('/acapi/general/activity/apply/999999999999991', { token });
+                    if (applyRes?.rc === 0 || applyRes?.rc === '0' || applyRes?.code === 0 || applyRes?.code === '0') {
+                        addLog(`[${acc.email}] ðŸ”¥ âœ… Event joined â€” referral terhubung!`);
+                    } else {
+                        addLog(`[${acc.email}] âš ï¸ Event join info: ${xtMsgClient(applyRes)}`);
+                    }
+
+                    // Second Apply to get draw count
+                    let drawRes = await xtFetchClient('/acapi/lucky/draw/10/index/309322e7-eb77-4a0b-ae9b-1d70e4eedda5', { token });
+                    if (drawRes?.rc === 0 || drawRes?.rc === '0' || drawRes?.code === 0 || drawRes?.code === '0') {
+                        addLog(`[${acc.email}] ðŸ”¥ ${acc.email} ditambahkan ke draw list!`);
+                    } else {
+                        addLog(`[${acc.email}] âš ï¸ Draw list info: ${xtMsgClient(drawRes)}`);
+                    }
 
                     setUsedEmails(prev => {
                         const updated = [...prev, acc.email];
@@ -354,12 +369,26 @@ const Index = () => {
                     });
 
                     updateAccount(id, { status: 'success', message: `Registered! ID: ${userId}`, userId });
-                    addLog(`[${acc.email}] âœ… SUCCESS! Account registered.`);
+                    addLog(`[${acc.email}] ðŸ”¥ âœ… Registered & token!`);
+                    addLog(`[${acc.email}] â„¹ï¸ ${acc.email} disimpan ke database`);
                     toast.success(`${acc.email} terdaftar!`);
                 } catch (e: any) {
                     updateAccount(id, { status: 'error', message: e.message });
                     addLog(`[ERROR] ${acc.email}: ${e.message}`);
                     toast.error(`Gagal: ${e.message}`);
+                } finally {
+                    // Trigger next in queue automatically
+                    setTimeout(() => {
+                        setAccounts(currentAccounts => {
+                            const nextAcc = currentAccounts.find(a => a.status === 'pending');
+                            if (nextAcc && window.initGeetest4) {
+                                addLog(`[Batch] ðŸ”„ Memulai akun selanjutnya: ${nextAcc.email}`);
+                                // Give a tiny delay so the state updates first before triggering the next captcha
+                                setTimeout(() => startManualCaptcha(nextAcc.id), 500);
+                            }
+                            return currentAccounts;
+                        });
+                    }, 2000);
                 }
             }).onError(function (e: any) {
                 updateAccount(id, { status: 'error', message: 'Captcha Error: ' + e.msg });
