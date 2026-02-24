@@ -63,7 +63,6 @@ const Index = () => {
     const [referralCode, setReferralCode] = useState("");
     const [jumlah, setJumlah] = useState("5");
     const [accounts, setAccounts] = useState<AccountEntry[]>([]);
-    const [bulkInput, setBulkInput] = useState("");
     const [logs, setLogs] = useState<string[]>([]);
     const [serverIp, setServerIp] = useState("Loading IP...");
     const [usedEmails, setUsedEmails] = useState<string[]>([]);
@@ -194,28 +193,6 @@ const Index = () => {
         toast.success("Gmail disalin");
     };
 
-    const handleParseAndAdd = () => {
-        if (!bulkInput.trim()) return;
-        const lines = bulkInput.trim().split("\n").filter(Boolean);
-
-        const newAccounts: AccountEntry[] = lines.map(line => {
-            const parts = line.split('|');
-            return {
-                id: Math.random().toString(36).substring(7),
-                email: parts[0] || '',
-                passwordXT: parts[1] || passwordXT,
-                referralCode: parts[2] || referralCode,
-                appPassword: parts[3] || appPassword,
-                status: 'pending'
-            };
-        });
-
-        setAccounts(prev => [...prev, ...newAccounts]);
-        setBulkInput("");
-        addLog(`Parsed & added ${newAccounts.length} entries manually.`);
-        toast.success(`${newAccounts.length} entries ditambahkan`);
-    };
-
     const updateAccount = (id: string, updates: Partial<AccountEntry>) => {
         setAccounts(prev => prev.map(acc => acc.id === id ? { ...acc, ...updates } : acc));
     };
@@ -250,10 +227,10 @@ const Index = () => {
                 try {
                     // 1. Prepare Headers (Auto-generated Only)
                     let customHeadersObj: any = {};
-                    addLog(`[${acc.email}] ðŸ”‘ Generating unique device headers...`);
+                    addLog(`[${acc.email}] 🔑 Generating unique device headers...`);
                     const genRes = await fetch('/api/generate-device-headers');
                     customHeadersObj = await genRes.json();
-                    addLog(`[${acc.email}] âœ… Device identity generated.`);
+                    addLog(`[${acc.email}] ✅ Device identity generated.`);
                     await new Promise(r => setTimeout(r, 1000));
 
                     // Client-side execution helper
@@ -321,11 +298,11 @@ const Index = () => {
                     });
                     if (!capData.data?.certificate) throw new Error(xtMsgClient(capData) || "Gagal validasi captcha. (Pastikan ekstensi Bypass CORS aktif!)");
 
-                    addLog(`[${acc.email}] âœ… Captcha validated.`);
+                    addLog(`[${acc.email}] ✅ Captcha validated.`);
                     await new Promise(r => setTimeout(r, 2000));
 
                     // 3. Send OTP (Directly to XT)
-                    addLog(`[${acc.email}] ðŸ”¥ Sending OTP code via Client...`);
+                    addLog(`[${acc.email}] 🔥 Sending OTP code via Client...`);
                     updateAccount(id, { status: 'registering', message: 'Mengirim OTP...' });
                     let sendOtpData = await xtFetchClient('/uaapi/user/msg/doSendCode', {
                         query: { codeType: '101', apiKey: 'regist' },
@@ -333,7 +310,7 @@ const Index = () => {
                         isMinimal: true
                     });
                     if (!xtSuccessClient(sendOtpData)) throw new Error(xtMsgClient(sendOtpData) || "Gagal kirim OTP");
-                    addLog(`[${acc.email}] ðŸ“¨ OTP sent! Waiting 10s...`);
+                    addLog(`[${acc.email}] 📨 OTP sent! Waiting 10s...`);
                     await new Promise(r => setTimeout(r, 10000));
 
                     // 4. Poll for OTP (Max 90s, Backend)
@@ -341,7 +318,7 @@ const Index = () => {
                     let otpFound: string | null = null;
                     const startTime = Date.now();
                     while (!otpFound && (Date.now() - startTime) < 90000) {
-                        addLog(`[${acc.email}] ðŸ” Searching for OTP...`);
+                        addLog(`[${acc.email}] 🔍 Searching for OTP...`);
                         let pollRes = await fetch('/api/fetch-otp', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -357,7 +334,7 @@ const Index = () => {
                     if (!otpFound) throw new Error("OTP tidak masuk ke Gmail (Timeout 90s)");
 
                     // 5. Complete Register (Directly to XT)
-                    addLog(`[${acc.email}] ðŸš€ Registering account via Client...`);
+                    addLog(`[${acc.email}] 🚀 Registering account via Client...`);
                     updateAccount(id, { status: 'registering', message: 'Selesaikan pendaftaran...' });
 
                     let keyData = await xtFetchClient('/uaapi/uaa/authorize/passwd/publicKey', { method: 'POST', isMinimal: true });
@@ -397,11 +374,11 @@ const Index = () => {
                     });
 
                     // Join Event & Draw List
-                    addLog(`[${acc.email}] â„¹ï¸ Auto-joining event dengan ref=none...`);
+                    addLog(`[${acc.email}] ℹ️ Auto-joining event dengan ref=none...`);
                     // First Apply (We don't strictly check success here, just fire it)
                     try {
                         let applyRes = await xtFetchClient('/acapi/general/activity/apply/999999999999991', { token });
-                        addLog(`[${acc.email}] ðŸ”¥ âœ… Event joined â€” referral terhubung!`);
+                        addLog(`[${acc.email}] 🔥 ✅ Event joined — referral terhubung!`);
                     } catch (e) {
                         // silently ignore
                     }
@@ -409,7 +386,7 @@ const Index = () => {
                     // Second Apply to get draw count
                     try {
                         let drawRes = await xtFetchClient('/acapi/lucky/draw/10/index/309322e7-eb77-4a0b-ae9b-1d70e4eedda5', { token });
-                        addLog(`[${acc.email}] ðŸ”¥ ${acc.email} ditambahkan ke draw list!`);
+                        addLog(`[${acc.email}] 🔥 ${acc.email} ditambahkan ke draw list!`);
                     } catch (e) {
                         // silently ignore
                     }
@@ -421,8 +398,8 @@ const Index = () => {
                     });
 
                     updateAccount(id, { status: 'success', message: `Registered! ID: ${userId}`, userId });
-                    addLog(`[${acc.email}] ðŸ”¥ âœ… Registered & token!`);
-                    addLog(`[${acc.email}] â„¹ï¸ ${acc.email} disimpan ke database`);
+                    addLog(`[${acc.email}] 🔥 ✅ Registered & token!`);
+                    addLog(`[${acc.email}] ℹ️ ${acc.email} disimpan ke database`);
                     toast.success(`${acc.email} terdaftar!`);
                 } catch (e: any) {
                     updateAccount(id, { status: 'error', message: e.message });
@@ -434,7 +411,7 @@ const Index = () => {
                         setAccounts(currentAccounts => {
                             const nextAcc = currentAccounts.find(a => a.status === 'pending');
                             if (nextAcc && window.initGeetest4) {
-                                addLog(`[Batch] ðŸ”„ Memulai akun selanjutnya: ${nextAcc.email}`);
+                                addLog(`[Batch] 🔄 Memulai akun selanjutnya: ${nextAcc.email}`);
                                 // Give a tiny delay so the state updates first before triggering the next captcha
                                 setTimeout(() => startManualCaptcha(nextAcc.id), 500);
                             }
@@ -462,9 +439,15 @@ const Index = () => {
         }
     };
 
-    const totalGeneratedEmail = accounts.length;
-    const availableCount = Math.max(0, (gmail ? Math.pow(2, gmail.replace(/\./g, "").split("@")[0]?.length - 1 || 0) : 0));
+    const getBaseEmail = (emailStr: string) => {
+        if (!emailStr || !emailStr.includes("@")) return "";
+        const [local, domain] = emailStr.split("@");
+        return `${local.replace(/\./g, "")}@${domain}`.toLowerCase();
+    };
+
+    const successCount = accounts.filter(a => a.status === 'success').length;
     const pendingCount = accounts.filter(a => a.status === 'pending' || a.status === 'error').length;
+    const remainingCount = accounts.filter(a => a.status !== 'success').length;
 
     return (
         <div className="min-h-screen bg-[#0f0f10] text-[#ececec] p-4 max-w-lg mx-auto pb-24 font-inter text-sm">
@@ -553,7 +536,7 @@ const Index = () => {
                         type="password"
                         value={appPassword}
                         onChange={(e) => { setAppPassword(e.target.value); handleSaveActiveForm(); }}
-                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                        placeholder="••••••••••••••••"
                         className="bg-[#121214] border-[#2c2c2f] text-white focus-visible:ring-1 focus-visible:ring-green-500 focus-visible:border-green-500 h-10 font-mono tracking-widest text-lg"
                         onBlur={handleSaveActiveForm}
                     />
@@ -598,10 +581,9 @@ const Index = () => {
                 {/* Stats */}
                 <div className="flex justify-between items-center text-xs pt-1">
                     <p>
-                        <span className="text-yellow-500 font-bold">{usedEmails.length} sukses daftar</span>
-                        <span className="text-[#666]"> â€¢ </span>
-                        <span className="text-green-500 font-bold">{availableCount} variasi sisa</span>
-                        <span className="text-[#666]"> â€¢ {totalGeneratedEmail} di antrean</span>
+                        <span className="text-yellow-500 font-bold">{successCount} sukses</span>
+                        <span className="text-[#666]"> • </span>
+                        <span className="text-green-500 font-bold">{remainingCount} sisa</span>
                     </p>
                     <button onClick={handleResetHistory} className="text-[#777] underline hover:text-white transition-colors">
                         Reset antrean
@@ -614,22 +596,9 @@ const Index = () => {
                 </Button>
             </div>
 
-            {/* Bulk Input */}
-            <div className="mb-6 bg-[#1a1a1c] p-4 rounded-xl border border-[#2c2c2f]">
-                <Textarea
-                    value={bulkInput}
-                    onChange={(e) => setBulkInput(e.target.value)}
-                    placeholder={"Tempel manual di sini:\nemail1@gmail.com|password123|REFCODE1|gmailAppPass\nemail2@gmail.com|password456|REFCODE2"}
-                    className="bg-[#121214] border-[#2c2c2f] text-[#ccc] font-mono text-[11px] min-h-[80px] focus-visible:ring-1 focus-visible:ring-[#444] rounded-md"
-                />
-                <Button onClick={handleParseAndAdd} variant="outline" className="w-full mt-3 bg-[#1e1e20] border-[#333] text-[#aaa] hover:bg-[#252528] hover:text-white h-10 text-xs">
-                    Parse & Tambah
-                </Button>
-            </div>
-
             {/* Account List */}
             <div className="mb-6">
-                <h3 className="text-xs font-bold text-[#888] mb-3 uppercase tracking-wider">{accounts.length} akun â€” {pendingCount} pending</h3>
+                <h3 className="text-xs font-bold text-[#888] mb-3 uppercase tracking-wider">{accounts.length} akun — {pendingCount} pending</h3>
                 <div className="flex flex-col gap-3">
                     {accounts.map((acc, i) => (
                         <div key={acc.id} className={`p-3 rounded-lg border relative overflow-hidden flex flex-col gap-2 transition-all ${acc.status === 'success' ? 'bg-[#1a2e1d] border-green-500/40' :
@@ -687,7 +656,7 @@ const Index = () => {
                     {logs.slice().reverse().map((log, i) => (
                         <div key={i} className={`whitespace-pre-wrap mb-1 ${log.includes('[SUCCESS]') ? 'text-green-400' : log.includes('[ERROR]') ? 'text-red-400' : ''}`}>{log}</div>
                     ))}
-                    {logs.length === 0 && <span>â‰¥ Logs ready (menunggu eksekusi)</span>}
+                    {logs.length === 0 && <span>≥ Logs ready (menunggu eksekusi)</span>}
                 </div>
             </div>
         </div>
