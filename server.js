@@ -353,6 +353,35 @@ app.get('/api/ip', async (req, res) => {
     }
 });
 
+// Helper: Encrypt Password
+app.post('/api/encrypt', (req, res) => {
+    var password = req.body.password;
+    var publicKey = req.body.publicKey;
+    if (!password || !publicKey) return res.status(400).json({ ok: false, msg: 'password & publicKey required' });
+    try {
+        var encrypted = rsaEncrypt(password, publicKey);
+        res.json({ ok: true, encrypted: encrypted });
+    } catch (e) {
+        res.status(500).json({ ok: false, msg: e.message });
+    }
+});
+
+// Helper: Save Account
+app.post('/api/save-account', (req, res) => {
+    var email = req.body.email;
+    var password = req.body.password;
+    var userId = req.body.userId;
+    var refCode = req.body.refCode;
+    var token = req.body.token;
+    if (!email || !password) return res.status(400).json({ ok: false, msg: 'email & password required' });
+    try {
+        fs.appendFileSync(ACCOUNTS_FILE, `${email}|${password}|${userId || ''}|${refCode || ''}|${new Date().toISOString()}|${token || ''}\n`);
+        res.json({ ok: true });
+    } catch (e) {
+        res.status(500).json({ ok: false, msg: e.message });
+    }
+});
+
 // Catch-all route to serve React app for non-API requests
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
