@@ -593,9 +593,9 @@ const Index = () => {
             )}
 
             {/* Inputs */}
-            <div className="space-y-4 mb-6 bg-[#1a1a1c] p-4 rounded-xl border border-[#2c2c2f]">
-                <div className="p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg mb-4">
-                    <label className="text-xs mb-1.5 block text-blue-400 font-bold flex items-center gap-1.5">
+            <div className="space-y-3 mb-5 bg-[#1a1a1c] p-3 rounded-xl border border-[#2c2c2f]">
+                <div className="p-2 bg-blue-900/20 border border-blue-500/30 rounded-lg mb-2">
+                    <label className="text-[11px] mb-1.5 block text-blue-400 font-bold flex items-center gap-1.5">
                         <KeyRound className="w-3.5 h-3.5" />
                         Cloud Sync Token
                     </label>
@@ -604,33 +604,33 @@ const Index = () => {
                             value={syncToken}
                             onChange={(e) => setSyncToken(e.target.value)}
                             placeholder="Buat kunci rahasia bebas (misal: RAHASIAKU)"
-                            className="bg-[#121214] border-[#2c2c2f] text-white flex-1 focus-visible:ring-1 focus-visible:ring-blue-500 h-9 text-xs"
+                            className="bg-[#121214] border-[#2c2c2f] text-white flex-1 focus-visible:ring-1 focus-visible:ring-blue-500 h-8 text-[#aaa] text-[12px]"
                         />
-                        <Button variant="outline" size="icon" onClick={handleSyncSave} className="bg-[#1f1f22] hover:bg-blue-600/20 border-[#333] hover:border-blue-500 text-blue-400 h-9 w-9 shrink-0 transition-colors" title="Simpan Data ke Cloud">
-                            <CloudUpload className="w-4 h-4" />
+                        <Button variant="outline" size="icon" onClick={handleSyncSave} className="bg-[#1f1f22] hover:bg-blue-600/20 border-[#333] hover:border-blue-500 text-blue-400 h-8 w-8 shrink-0 transition-colors" title="Simpan Data ke Cloud">
+                            <CloudUpload className="w-3.5 h-3.5" />
                         </Button>
-                        <Button variant="outline" size="icon" onClick={handleSyncLoad} className="bg-[#1f1f22] hover:bg-green-600/20 border-[#333] hover:border-green-500 text-green-400 h-9 w-9 shrink-0 transition-colors" title="Muat Data dari Cloud">
-                            <CloudDownload className="w-4 h-4" />
+                        <Button variant="outline" size="icon" onClick={handleSyncLoad} className="bg-[#1f1f22] hover:bg-green-600/20 border-[#333] hover:border-green-500 text-green-400 h-8 w-8 shrink-0 transition-colors" title="Muat Data dari Cloud">
+                            <CloudDownload className="w-3.5 h-3.5" />
                         </Button>
                     </div>
-                    <p className="text-[10px] text-[#777] mt-1.5 leading-tight">Buat token bebas. Simpan untuk upload profil, gunakan token yang sama di HP/PC lain untuk download profil.</p>
+                    <p className="text-[9px] text-[#777] mt-1.5 leading-tight">Buat token bebas. Simpan untuk upload profil, gunakan token yang sama di HP/PC lain untuk download profil.</p>
                 </div>
 
                 <div>
-                    <label className="text-xs mb-1.5 block text-[#999] font-medium">Gmail</label>
+                    <label className="text-[11px] mb-1 block text-[#999] font-medium">Gmail</label>
                     <div className="flex gap-2 mb-1.5">
                         <Input
                             value={gmail}
                             onChange={(e) => { setGmail(e.target.value); handleSaveActiveForm(); }}
                             placeholder="example@gmail.com"
-                            className="bg-[#121214] border-[#2c2c2f] text-white flex-1 focus-visible:ring-1 focus-visible:ring-green-500 focus-visible:border-green-500 h-10"
+                            className="bg-[#121214] border-[#2c2c2f] text-white flex-1 focus-visible:ring-1 focus-visible:ring-green-500 focus-visible:border-green-500 h-8 text-[12px] placeholder:text-[#555]"
                             onBlur={handleSaveActiveForm}
                         />
-                        <Button variant="outline" size="icon" onClick={() => { navigator.clipboard.writeText(gmail); toast.success("Disalin"); }} className="bg-[#1f1f22] hover:bg-[#2c2c2f] border-[#333] text-white h-10 w-10 shrink-0" title="Copy">
-                            <ClipboardCopy className="w-4 h-4" />
+                        <Button variant="outline" size="icon" onClick={() => { navigator.clipboard.writeText(gmail); toast.success("Disalin"); }} className="bg-[#1f1f22] hover:bg-[#2c2c2f] border-[#333] text-white h-8 w-8 shrink-0" title="Copy">
+                            <ClipboardCopy className="w-3.5 h-3.5" />
                         </Button>
-                        <Button variant="outline" size="icon" onClick={handleSaveConfig} className="bg-blue-600 hover:bg-blue-700 border-none text-white h-10 w-10 shrink-0" title="Simpan sebagai Profil">
-                            <Save className="w-4 h-4" />
+                        <Button variant="outline" size="icon" onClick={handleSaveConfig} className="bg-blue-600 hover:bg-blue-700 border-none text-white h-8 w-8 shrink-0" title="Simpan sebagai Profil">
+                            <Save className="w-3.5 h-3.5" />
                         </Button>
                     </div>
                     {/* INDIKATOR DOT TRICK */}
@@ -644,46 +644,46 @@ const Index = () => {
                 </div>
 
                 <div>
-                    <label className="text-xs mb-1.5 block text-[#999] font-medium">App Password (untuk OTP)</label>
+                    <label className="text-[11px] mb-1 block text-[#999] font-medium">App Password (untuk OTP)</label>
                     <Input
                         type="password"
                         value={appPassword}
                         onChange={(e) => { setAppPassword(e.target.value); handleSaveActiveForm(); }}
                         placeholder="••••••••••••••••"
-                        className="bg-[#121214] border-[#2c2c2f] text-white focus-visible:ring-1 focus-visible:ring-green-500 focus-visible:border-green-500 h-10 font-mono tracking-widest text-lg"
+                        className="bg-[#121214] border-[#2c2c2f] text-white focus-visible:ring-1 focus-visible:ring-green-500 focus-visible:border-green-500 h-8 font-mono tracking-widest text-[14px] placeholder:text-[#555] placeholder:tracking-normal"
                         onBlur={handleSaveActiveForm}
                     />
                 </div>
 
                 <div>
-                    <label className="text-xs mb-1.5 block text-[#999] font-medium">Password XT</label>
+                    <label className="text-[11px] mb-1 block text-[#999] font-medium">Password XT</label>
                     <Input
                         value={passwordXT}
                         onChange={(e) => { setPasswordXT(e.target.value); handleSaveActiveForm(); }}
                         placeholder="Password untuk akun XT"
-                        className="bg-[#121214] border-[#2c2c2f] text-white focus-visible:ring-1 focus-visible:ring-green-500 focus-visible:border-green-500 h-10"
+                        className="bg-[#121214] border-[#2c2c2f] text-white focus-visible:ring-1 focus-visible:ring-green-500 focus-visible:border-green-500 h-8 text-[12px] placeholder:text-[#555]"
                         onBlur={handleSaveActiveForm}
                     />
                 </div>
 
                 <div>
-                    <label className="text-xs mb-1.5 block text-[#999] font-medium">Referral Code</label>
+                    <label className="text-[11px] mb-1 block text-[#999] font-medium">Referral Code</label>
                     <Input
                         value={referralCode}
                         onChange={(e) => { setReferralCode(e.target.value); handleSaveActiveForm(); }}
                         placeholder="REFCODE"
-                        className="bg-[#121214] border-[#2c2c2f] text-white focus-visible:ring-1 focus-visible:ring-green-500 focus-visible:border-green-500 h-10"
+                        className="bg-[#121214] border-[#2c2c2f] text-white focus-visible:ring-1 focus-visible:ring-green-500 focus-visible:border-green-500 h-8 text-[12px] font-mono placeholder:text-[#555] uppercase"
                         onBlur={handleSaveActiveForm}
                     />
                 </div>
 
                 <div>
-                    <label className="text-xs mb-1.5 block text-[#999] font-medium">Jumlah Generate</label>
+                    <label className="text-[11px] mb-1 block text-[#999] font-medium">Jumlah Generate</label>
                     <Select value={jumlah} onValueChange={setJumlah}>
-                        <SelectTrigger className="bg-[#121214] border-[#2c2c2f] text-white focus-visible:ring-1 focus-visible:ring-green-500 h-10">
+                        <SelectTrigger className="bg-[#121214] border-[#2c2c2f] text-white focus-visible:ring-1 focus-visible:ring-green-500 h-8 text-[12px]">
                             <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-[#17171a] border-[#2c2c2f] text-white">
+                        <SelectContent className="bg-[#17171a] border-[#2c2c2f] text-white text-[12px]">
                             {[1, 2, 5, 10, 20, 50].map((n) => (
                                 <SelectItem key={n} value={String(n)} className="focus:bg-[#2c2c2f] focus:text-white cursor-pointer">{n}</SelectItem>
                             ))}
@@ -692,7 +692,7 @@ const Index = () => {
                 </div>
 
                 {/* Stats Bawah & Tombol Kanan Kiri */}
-                <div className="flex justify-between items-center text-xs pt-1 mb-2">
+                <div className="flex justify-between items-center text-[10px] pt-1 mb-2">
                     <p>
                         <span className="text-yellow-500 font-bold">{accounts.length} di antrean</span>
                         <span className="text-[#666]"> • </span>
@@ -703,13 +703,13 @@ const Index = () => {
                     </button>
                 </div>
 
-                <div className="flex gap-2 w-full">
-                    <Button onClick={handleGenerate} className="flex-1 bg-[#189b4a] hover:bg-green-600 text-white font-semibold flex items-center justify-center gap-2 h-11 text-sm mt-2 transition-all active:scale-[0.98]">
-                        <Shuffle className="w-4 h-4" />
-                        Generate Dot Trick
+                <div className="flex gap-2 w-full mt-1.5">
+                    <Button onClick={handleGenerate} className="flex-1 bg-[#189b4a] hover:bg-green-600 text-white font-semibold flex items-center justify-center gap-1.5 h-9 text-[12px] transition-all active:scale-[0.98]">
+                        <Shuffle className="w-3.5 h-3.5" />
+                        Gen Dot Trick
                     </Button>
-                    <Button onClick={handleStartBatch} disabled={pendingCount === 0} className="w-[120px] bg-[#1dae54] hover:bg-green-500 text-white font-bold h-11 text-sm mt-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98]">
-                        <Play className="w-4 h-4 mr-1.5" />
+                    <Button onClick={handleStartBatch} disabled={pendingCount === 0} className="w-[100px] bg-[#1dae54] hover:bg-green-500 text-white font-bold h-9 text-[12px] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98]">
+                        <Play className="w-3.5 h-3.5 mr-1" />
                         Batch
                     </Button>
                 </div>
