@@ -222,23 +222,21 @@ const Index = () => {
             // 2. Gabungkan (Merge) data cloud dengan data lokal yang sekarang
 
             // Merge Configs berdasarkan Gmail
-            const mergedConfigs = [...cloudConfigs];
-            savedConfigs.forEach((localConf) => {
-                const existingIdx = mergedConfigs.findIndex(c => c.gmail === localConf.gmail);
-                if (existingIdx === -1) {
-                    mergedConfigs.push(localConf);
-                } else {
-                    // Update dengan yang lokal jika sudah ada
-                    mergedConfigs[existingIdx] = localConf;
-                }
-            });
+            let finalConfigs = savedConfigs;
+
+            // JIKA LOKAL KOSONG MELOMPONG (Misal: buka di HP baru), KITA JANGAN TIMPA CLOUD YANG ADA. KITA PAKAI CLOUD PUNYA.
+            // Namun, jika lokal ada isinya (misal: 1 atau 5 akun), kita anggap lokal adalah kebenaran mutlak (Timpa).
+            // Ini memungkinkan penghapusan (delete profile) tersinkronisasi.
+            if (savedConfigs.length === 0 && cloudConfigs.length > 0) {
+                finalConfigs = cloudConfigs;
+            }
 
             // Merge Emails Unik
             const mergedUsedEmails = Array.from(new Set([...cloudUsedEmails, ...usedEmails]));
 
             // 3. Simpan data gabungan tersebut ke Cloud
             const dataToSave = {
-                savedConfigs: mergedConfigs,
+                savedConfigs: finalConfigs,
                 usedEmails: mergedUsedEmails
             };
 
@@ -251,8 +249,8 @@ const Index = () => {
 
             if (result.ok) {
                 // Update tabel lokal dengan hasil gabungan
-                setSavedConfigs(mergedConfigs);
-                localStorage.setItem('xt_saved_configs', JSON.stringify(mergedConfigs));
+                setSavedConfigs(finalConfigs);
+                localStorage.setItem('xt_saved_configs', JSON.stringify(finalConfigs));
 
                 setUsedEmails(mergedUsedEmails);
                 localStorage.setItem('xt_used_emails', JSON.stringify(mergedUsedEmails));
@@ -280,19 +278,8 @@ const Index = () => {
             const result = await res.json();
             if (result.ok && result.data) {
                 if (result.data.savedConfigs) {
-                    setSavedConfigs(prev => {
-                        const newConfigs = [...prev];
-                        result.data.savedConfigs.forEach((incoming: SavedConfig) => {
-                            const existingIdx = newConfigs.findIndex(c => c.gmail === incoming.gmail);
-                            if (existingIdx === -1) {
-                                newConfigs.push(incoming);
-                            } else {
-                                newConfigs[existingIdx] = incoming;
-                            }
-                        });
-                        localStorage.setItem('xt_saved_configs', JSON.stringify(newConfigs));
-                        return newConfigs;
-                    });
+                    setSavedConfigs(result.data.savedConfigs);
+                    localStorage.setItem('xt_saved_configs', JSON.stringify(result.data.savedConfigs));
                 }
                 if (result.data.usedEmails) {
                     setUsedEmails(prev => {
