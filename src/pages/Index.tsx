@@ -145,7 +145,7 @@ const Index = () => {
                 gmail,
                 passXT: passwordXT,
                 appPass: appPassword,
-                refCode: referralCode
+                refCode: ""
             };
             const updated = [...prev, newConf];
             localStorage.setItem('xt_saved_configs', JSON.stringify(updated));
@@ -557,35 +557,15 @@ const Index = () => {
                             onClick={() => {
                                 setGmail(conf.gmail);
                                 setPasswordXT(conf.passXT);
-                                setReferralCode(conf.refCode);
                                 setAppPassword(conf.appPass);
                                 handleSaveActiveForm();
                                 toast.success("Profil dimuat ke form");
                             }}>
-                            <div className="flex justify-between items-start mb-1.5">
-                                <p className="text-[11px] text-green-400 font-bold truncate flex-1">{conf.gmail}</p>
-                                <button onClick={(e) => { e.stopPropagation(); handleDeleteConfig(conf.id); }} className="text-[#555] hover:text-red-500 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-0.5">
+                            <div className="flex justify-between items-center">
+                                <p className="text-[12px] text-green-400 font-bold truncate flex-1">{conf.gmail}</p>
+                                <button onClick={(e) => { e.stopPropagation(); handleDeleteConfig(conf.id); }} className="text-[#555] hover:text-red-500 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1">
                                     <Trash2 className="w-3.5 h-3.5" />
                                 </button>
-                            </div>
-                            <div className="grid grid-cols-2 gap-y-1 gap-x-3 text-[10px] font-mono text-[#aaa]">
-                                <div className="truncate"><span className="text-[#555]">XT:</span> {conf.passXT ? '********' : '-'}</div>
-                                <div className="truncate"><span className="text-[#555]">Ref:</span> <span className="text-yellow-400">{conf.refCode || '-'}</span></div>
-                                <div className="truncate flex items-center gap-1 col-span-2">
-                                    <span className="text-[#555]">App:</span>
-                                    <span>{visibleAppPassIdx === idx ? conf.appPass : (conf.appPass ? '********' : '-')}</span>
-                                    {conf.appPass && (
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setVisibleAppPassIdx(visibleAppPassIdx === idx ? null : idx);
-                                            }}
-                                            className="ml-auto text-[#666] hover:text-white mr-1"
-                                        >
-                                            {visibleAppPassIdx === idx ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                                        </button>
-                                    )}
-                                </div>
                             </div>
                         </div>
                     ))}
