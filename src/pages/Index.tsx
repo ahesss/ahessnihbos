@@ -487,7 +487,7 @@ const Index = () => {
                     addLog(`[ERROR] ${acc.email}: ${e.message}`);
                     toast.error(`Gagal: ${e.message}`);
                 } finally {
-                    // Trigger next in queue automatically
+                    // Trigger next in queue automatically almost instantly
                     setTimeout(() => {
                         setAccounts(currentAccounts => {
                             // Hapus akun yang sukses agar UI jadi bersih
@@ -496,12 +496,12 @@ const Index = () => {
                             const nextAcc = remainingAccounts.find(a => a.status === 'pending');
                             if (nextAcc && window.initGeetest4) {
                                 addLog(`[Batch] 🔄 Memulai akun selanjutnya: ${nextAcc.email}`);
-                                // Give a tiny delay so the state updates first before triggering the next captcha
-                                setTimeout(() => startManualCaptcha(nextAcc.id), 500);
+                                // Lanjut secepatnya agar efisien waktu
+                                setTimeout(() => startManualCaptcha(nextAcc.id), 100);
                             }
                             return remainingAccounts;
                         });
-                    }, 4000); // Tunggu 4 detik agar user sempat melihat pesan sukses sebelum dihapus dari tabel
+                    }, 100); // Tanpa jeda panjang, langsung sikat antrean berikutnya
                 }
             }).onError(function (e: any) {
                 updateAccount(id, { status: 'error', message: 'Captcha Error: ' + e.msg });
