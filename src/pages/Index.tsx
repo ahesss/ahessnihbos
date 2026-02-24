@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shuffle, Trash2, ClipboardCopy, Play, CheckCircle2, ShieldCheck, User, Bot, Globe, Eye, EyeOff, Save } from "lucide-react";
+import { Shuffle, Trash2, ClipboardCopy, Play, CheckCircle2, ShieldCheck, User, Bot, Globe, Eye, EyeOff, Save, CloudUpload, CloudDownload, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 
 declare global {
@@ -68,6 +68,7 @@ const Index = () => {
     const [usedEmails, setUsedEmails] = useState<string[]>([]);
     const [savedConfigs, setSavedConfigs] = useState<SavedConfig[]>([]);
     const [visibleAppPassIdx, setVisibleAppPassIdx] = useState<number | null>(null);
+    const [syncToken, setSyncToken] = useState<string>(localStorage.getItem('xt_sync_token') || '');
 
     useEffect(() => {
         // Load persist form data
@@ -149,6 +150,61 @@ const Index = () => {
             return updated;
         });
         toast("Profil dihapus");
+    };
+
+    const handleSyncSave = async () => {
+        if (!syncToken) {
+            toast.error("Masukkan Token Sync terlebih dahulu");
+            return;
+        }
+        localStorage.setItem('xt_sync_token', syncToken);
+        const dataToSave = {
+            savedConfigs,
+            usedEmails
+        };
+        try {
+            const res = await fetch('/api/sync/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: syncToken, data: dataToSave })
+            });
+            const result = await res.json();
+            if (result.ok) toast.success(result.msg);
+            else toast.error(result.msg);
+        } catch (e) {
+            toast.error("Gagal terhubung ke server untuk sync");
+        }
+    };
+
+    const handleSyncLoad = async () => {
+        if (!syncToken) {
+            toast.error("Masukkan Token Sync terlebih dahulu");
+            return;
+        }
+        localStorage.setItem('xt_sync_token', syncToken);
+        try {
+            const res = await fetch('/api/sync/load', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: syncToken })
+            });
+            const result = await res.json();
+            if (result.ok && result.data) {
+                if (result.data.savedConfigs) {
+                    setSavedConfigs(result.data.savedConfigs);
+                    localStorage.setItem('xt_saved_configs', JSON.stringify(result.data.savedConfigs));
+                }
+                if (result.data.usedEmails) {
+                    setUsedEmails(result.data.usedEmails);
+                    localStorage.setItem('xt_used_emails', JSON.stringify(result.data.usedEmails));
+                }
+                toast.success(result.msg);
+            } else {
+                toast.error(result.msg);
+            }
+        } catch (e) {
+            toast.error("Gagal terhubung ke server untuk load data");
+        }
     };
 
     const handleGenerate = () => {
@@ -409,15 +465,18 @@ const Index = () => {
                     // Trigger next in queue automatically
                     setTimeout(() => {
                         setAccounts(currentAccounts => {
-                            const nextAcc = currentAccounts.find(a => a.status === 'pending');
+                            // Hapus akun yang sukses agar UI jadi bersih
+                            const remainingAccounts = currentAccounts.filter(a => a.status !== 'success');
+
+                            const nextAcc = remainingAccounts.find(a => a.status === 'pending');
                             if (nextAcc && window.initGeetest4) {
                                 addLog(`[Batch] 🔄 Memulai akun selanjutnya: ${nextAcc.email}`);
                                 // Give a tiny delay so the state updates first before triggering the next captcha
                                 setTimeout(() => startManualCaptcha(nextAcc.id), 500);
                             }
-                            return currentAccounts;
+                            return remainingAccounts;
                         });
-                    }, 2000);
+                    }, 4000); // Tunggu 4 detik agar user sempat melihat pesan sukses sebelum dihapus dari tabel
                 }
             }).onError(function (e: any) {
                 updateAccount(id, { status: 'error', message: 'Captcha Error: ' + e.msg });
@@ -468,7 +527,9 @@ const Index = () => {
             {/* Saved Configurations List */}
             {savedConfigs.length > 0 && (
                 <div className="mb-6 space-y-3">
-                    <h3 className="text-xs font-bold text-[#777] uppercase tracking-wider">Profil Tersimpan</h3>
+                    <div className="flex justify-between items-center mb-1">
+                        <h3 className="text-xs font-bold text-[#777] uppercase tracking-wider">Profil Tersimpan</h3>
+                    </div>
                     {savedConfigs.map((conf, idx) => (
                         <div key={conf.id} className="bg-[#17171a] p-3 rounded-lg border border-[#2c2c2f] hover:border-[#189b4a] transition-colors group cursor-pointer"
                             onClick={() => {
@@ -511,6 +572,28 @@ const Index = () => {
 
             {/* Inputs */}
             <div className="space-y-4 mb-6 bg-[#1a1a1c] p-4 rounded-xl border border-[#2c2c2f]">
+                <div className="p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg mb-4">
+                    <label className="text-xs mb-1.5 block text-blue-400 font-bold flex items-center gap-1.5">
+                        <KeyRound className="w-3.5 h-3.5" />
+                        Cloud Sync Token
+                    </label>
+                    <div className="flex gap-2">
+                        <Input
+                            value={syncToken}
+                            onChange={(e) => setSyncToken(e.target.value)}
+                            placeholder="Buat kunci rahasia bebas (misal: RAHASIAKU)"
+                            className="bg-[#121214] border-[#2c2c2f] text-white flex-1 focus-visible:ring-1 focus-visible:ring-blue-500 h-9 text-xs"
+                        />
+                        <Button variant="outline" size="icon" onClick={handleSyncSave} className="bg-[#1f1f22] hover:bg-blue-600/20 border-[#333] hover:border-blue-500 text-blue-400 h-9 w-9 shrink-0 transition-colors" title="Simpan Data ke Cloud">
+                            <CloudUpload className="w-4 h-4" />
+                        </Button>
+                        <Button variant="outline" size="icon" onClick={handleSyncLoad} className="bg-[#1f1f22] hover:bg-green-600/20 border-[#333] hover:border-green-500 text-green-400 h-9 w-9 shrink-0 transition-colors" title="Muat Data dari Cloud">
+                            <CloudDownload className="w-4 h-4" />
+                        </Button>
+                    </div>
+                    <p className="text-[10px] text-[#777] mt-1.5 leading-tight">Buat token bebas. Simpan untuk upload profil, gunakan token yang sama di HP/PC lain untuk download profil.</p>
+                </div>
+
                 <div>
                     <label className="text-xs mb-1.5 block text-[#999] font-medium">Gmail</label>
                     <div className="flex gap-2">
