@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shuffle, Trash2, ClipboardCopy, Play, CheckCircle2, ShieldCheck, User, Bot, Globe, Eye, EyeOff, Save, CloudUpload, CloudDownload, KeyRound, Activity, Clock, Zap, Target } from "lucide-react";
+import { Shuffle, Trash2, ClipboardCopy, Play, CheckCircle2, ShieldCheck, User, Bot, Globe, Eye, EyeOff, Save, CloudUpload, CloudDownload, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 
 declare global {
@@ -21,11 +21,8 @@ interface AccountEntry {
     passwordXT: string;
     referralCode: string;
     appPassword: string;
-    status: AccountStatus;
     message?: string;
     userId?: string;
-    startTime?: number; // Untuk hitung kecepatan
-    endTime?: number;
 }
 
 interface SavedConfig {
@@ -82,14 +79,6 @@ const Index = () => {
     const [savedConfigs, setSavedConfigs] = useState<SavedConfig[]>([]);
     const [visibleAppPassIdx, setVisibleAppPassIdx] = useState<number | null>(null);
     const [syncToken, setSyncToken] = useState<string>(localStorage.getItem('xt_sync_token') || '');
-    const [audioEnabled, setAudioEnabled] = useState<boolean>(true); // Bebas matikan/hidupkan suara
-
-    // Analitik
-    const [sessionStats, setSessionStats] = useState({
-        successCount: 0,
-        totalTimeSeconds: 0, // Total waktu untuk semua akun sukses di sesi ini
-        fastestTimeSeconds: 999
-    });
 
     // Authorization State
     const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
@@ -160,83 +149,6 @@ const Index = () => {
     const addLog = (msg: string) => {
         const time = new Date().toLocaleTimeString('id-ID', { hour12: false });
         setLogs(prev => [...prev, `[${time}] ${msg}`]);
-    };
-
-    // Fungsi Suara (Menggunakan Web Audio API agar pasti bunyi tanpa block internet/CDN)
-    const playSound = (type: 'swoosh' | 'success' | 'error') => {
-        if (!audioEnabled) return;
-        try {
-            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-            if (!AudioContextClass) return;
-
-            // Re-use context agar tidak memory leak
-            if (!(window as any).xtAudioCtx) {
-                (window as any).xtAudioCtx = new AudioContextClass();
-            }
-            const ctx: AudioContext = (window as any).xtAudioCtx;
-
-            if (ctx.state === 'suspended') {
-                ctx.resume(); // Atasi kebijakan Autoplay browser
-            }
-
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-
-            const now = ctx.currentTime;
-
-            if (type === 'success') {
-                // Suara Koin (Nada tinggi 1)
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(800, now);
-                osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
-                gain.gain.setValueAtTime(0, now);
-                gain.gain.linearRampToValueAtTime(0.3, now + 0.05);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-                osc.start(now);
-                osc.stop(now + 0.3);
-
-                // Nada tinggi 2 menyusul
-                setTimeout(() => {
-                    if (ctx.state === 'suspended') return;
-                    const osc2 = ctx.createOscillator();
-                    const gain2 = ctx.createGain();
-                    osc2.connect(gain2);
-                    gain2.connect(ctx.destination);
-                    osc2.type = 'sine';
-                    osc2.frequency.setValueAtTime(1200, ctx.currentTime);
-                    osc2.frequency.exponentialRampToValueAtTime(1600, ctx.currentTime + 0.1);
-                    gain2.gain.setValueAtTime(0, ctx.currentTime);
-                    gain2.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
-                    gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-                    osc2.start(ctx.currentTime);
-                    osc2.stop(ctx.currentTime + 0.3);
-                }, 100);
-
-            } else if (type === 'error') {
-                // Suara Buzzer Error
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(150, now);
-                osc.frequency.exponentialRampToValueAtTime(100, now + 0.4);
-                gain.gain.setValueAtTime(0, now);
-                gain.gain.linearRampToValueAtTime(0.3, now + 0.05);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-                osc.start(now);
-                osc.stop(now + 0.4);
-
-            } else if (type === 'swoosh') {
-                // Suara angin (pindah akun)
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(600, now);
-                osc.frequency.exponentialRampToValueAtTime(100, now + 0.2);
-                gain.gain.setValueAtTime(0, now);
-                gain.gain.linearRampToValueAtTime(0.1, now + 0.05);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-                osc.start(now);
-                osc.stop(now + 0.2);
-            }
-        } catch (e) { }
     };
 
     // Auto-save form inputs to active cache so they don't disappear on refresh
@@ -443,9 +355,8 @@ const Index = () => {
         const acc = accounts.find(a => a.id === id);
         if (!acc) return;
 
-        updateAccount(id, { status: 'solving', message: 'Selesaikan Captcha...', startTime: Date.now() });
+        updateAccount(id, { status: 'solving', message: 'Selesaikan Captcha...' });
         addLog(`[${acc.email}] Membuka panel Captcha...`);
-        playSound('swoosh');
 
         window.initGeetest4({
             captchaId: "f6cb1abffdcdf0b30659fd3bb4c0e929",
@@ -544,8 +455,8 @@ const Index = () => {
                         isMinimal: true
                     });
                     if (!xtSuccessClient(sendOtpData)) throw new Error(xtMsgClient(sendOtpData) || "Gagal kirim OTP");
-                    addLog(`[${acc.email}] 📨 OTP sent! Waiting 5s...`);
-                    await new Promise(r => setTimeout(r, 5000));
+                    addLog(`[${acc.email}] 📨 OTP sent! Waiting 10s...`);
+                    await new Promise(r => setTimeout(r, 10000));
 
                     // 4. Poll for OTP (Max 90s, Backend)
                     updateAccount(id, { status: 'registering', message: 'Mencari OTP di Gmail...' });
@@ -563,7 +474,7 @@ const Index = () => {
                             otpFound = pollData.otp;
                             break;
                         }
-                        await new Promise(r => setTimeout(r, 5000));
+                        await new Promise(r => setTimeout(r, 10000));
                     }
                     if (!otpFound) throw new Error("OTP tidak masuk ke Gmail (Timeout 90s)");
 
@@ -631,34 +542,13 @@ const Index = () => {
                         return updated;
                     });
 
-                    // Hitung Kecepatan Analitik dengan state acc paling baru agar startTime tidak undefined
-                    const endTime = Date.now();
-
-                    setAccounts(prevAccounts => {
-                        const currentAcc = prevAccounts.find(a => a.id === id);
-                        if (currentAcc && currentAcc.startTime) {
-                            const durationSec = (endTime - currentAcc.startTime) / 1000;
-
-                            setSessionStats(prev => ({
-                                successCount: prev.successCount + 1,
-                                totalTimeSeconds: prev.totalTimeSeconds + durationSec,
-                                fastestTimeSeconds: Math.min(prev.fastestTimeSeconds, durationSec)
-                            }));
-                            addLog(`[${acc.email}] 🔥 ✅ Registered & token! (${durationSec.toFixed(1)}s)`);
-                        } else {
-                            addLog(`[${acc.email}] 🔥 ✅ Registered & token!`);
-                        }
-                        return prevAccounts;
-                    });
-
-                    updateAccount(id, { status: 'success', message: `Registered! ID: ${userId}`, userId, endTime });
+                    updateAccount(id, { status: 'success', message: `Registered! ID: ${userId}`, userId });
+                    addLog(`[${acc.email}] 🔥 ✅ Registered & token!`);
                     addLog(`[${acc.email}] ℹ️ ${acc.email} disimpan ke database`);
-                    playSound('success');
                     toast.success(`${acc.email} terdaftar!`);
                 } catch (e: any) {
-                    updateAccount(id, { status: 'error', message: e.message, endTime: Date.now() });
+                    updateAccount(id, { status: 'error', message: e.message });
                     addLog(`[ERROR] ${acc.email}: ${e.message}`);
-                    playSound('error');
                     toast.error(`Gagal: ${e.message}`);
                 } finally {
                     // Trigger next in queue automatically almost instantly
@@ -761,40 +651,6 @@ const Index = () => {
                 <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-[#17171a] border border-[#2c2c2f] rounded-full px-2.5 py-1">
                     <Globe className="w-3 h-3 text-green-500" />
                     <span className="text-[10px] font-mono text-[#aaa]">{serverIp}</span>
-                </div>
-                {/* Toggle Suara - Kiri atas */}
-                <button
-                    onClick={() => setAudioEnabled(!audioEnabled)}
-                    className="absolute top-2 left-2 flex items-center justify-center bg-[#17171a] border border-[#2c2c2f] hover:bg-[#2c2c2f] rounded-full w-7 h-7 transition-colors"
-                    title={audioEnabled ? "Matikan Suara" : "Hidupkan Suara"}
-                >
-                    <span className="text-[14px]">{audioEnabled ? "🔊" : "🔇"}</span>
-                </button>
-            </div>
-
-            {/* ANALYTICS DASHBOARD MINI */}
-            <div className="mb-4 grid grid-cols-3 gap-2">
-                <div className="bg-[#17171a] border border-[#2c2c2f] rounded-xl p-2.5 flex flex-col items-center justify-center text-center relative overflow-hidden group">
-                    <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-green-500/0 via-green-500 to-green-500/0 opacity-50"></div>
-                    <Target className="w-4 h-4 text-green-500 mb-1 opacity-80" />
-                    <span className="text-[10px] text-[#777] font-bold uppercase tracking-wider mb-0.5">Sukses Sesi Ini</span>
-                    <span className="text-xl font-black text-[#ececec]">{sessionStats.successCount}</span>
-                </div>
-                <div className="bg-[#17171a] border border-[#2c2c2f] rounded-xl p-2.5 flex flex-col items-center justify-center text-center relative overflow-hidden">
-                    <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-blue-500/0 via-blue-500 to-blue-500/0 opacity-50"></div>
-                    <Clock className="w-4 h-4 text-blue-500 mb-1 opacity-80" />
-                    <span className="text-[10px] text-[#777] font-bold uppercase tracking-wider mb-0.5">Rata-Rata Waktu</span>
-                    <span className="text-xl font-black text-[#ececec]">
-                        {sessionStats.successCount > 0 ? (sessionStats.totalTimeSeconds / sessionStats.successCount).toFixed(1) : "0.0"}<span className="text-xs text-[#666] ml-0.5">s</span>
-                    </span>
-                </div>
-                <div className="bg-[#17171a] border border-[#2c2c2f] rounded-xl p-2.5 flex flex-col items-center justify-center text-center relative overflow-hidden">
-                    <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-yellow-500/0 via-yellow-500 to-yellow-500/0 opacity-50"></div>
-                    <Zap className="w-4 h-4 text-yellow-500 mb-1 opacity-80" />
-                    <span className="text-[10px] text-[#777] font-bold uppercase tracking-wider mb-0.5">Rekor Tercepat</span>
-                    <span className="text-xl font-black text-[#ececec]">
-                        {sessionStats.fastestTimeSeconds !== 999 ? sessionStats.fastestTimeSeconds.toFixed(1) : "0.0"}<span className="text-xs text-[#666] ml-0.5">s</span>
-                    </span>
                 </div>
             </div>
 
