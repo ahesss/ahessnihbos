@@ -450,8 +450,8 @@ const Index = () => {
                     addLog(`[${acc.email}] 🔥 Sending OTP code via Client...`);
                     updateAccount(id, { status: 'registering', message: 'Mengirim OTP...' });
                     let sendOtpData = await xtFetchClient('/uaapi/user/msg/doSendCode', {
-                        query: { codeType: '101', apiKey: 'regist' },
-                        body: { codeType: '101', receiveAddress: acc.email.trim(), puzzleValidateString: capData.data.certificate, regChannel: 'regist' },
+                        query: { codeType: '101' },
+                        body: { codeType: '101', receiveAddress: acc.email.trim(), puzzleValidateString: capData.data.certificate, regChannel: 'xt' },
                         isMinimal: true
                     });
                     if (!xtSuccessClient(sendOtpData)) throw new Error(xtMsgClient(sendOtpData) || "Gagal kirim OTP");
@@ -500,9 +500,8 @@ const Index = () => {
                             dynamicCode: otpFound.trim(),
                             loginPwd: encData.encrypted,
                             passwdId: keyData.data.passwdId,
-                            recommendCode: acc.referralCode || 'AKNSZM',
-                            regChannel: 'regist',
-                            apiKey: 'regist'
+                            recommendCode: acc.referralCode ? acc.referralCode.trim() : 'AKNSZM',
+                            regChannel: 'xt'
                         }
                     });
 
