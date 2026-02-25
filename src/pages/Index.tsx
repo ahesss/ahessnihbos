@@ -500,9 +500,7 @@ const Index = () => {
                             dynamicCode: otpFound.trim(),
                             loginPwd: encData.encrypted,
                             passwdId: keyData.data.passwdId,
-                            inviteCode: acc.referralCode ? acc.referralCode.trim() : 'AKNSZM',
-                            invitationCode: acc.referralCode ? acc.referralCode.trim() : 'AKNSZM',
-                            recommendCode: acc.referralCode ? acc.referralCode.trim() : 'AKNSZM',
+                            recommendCode: acc.referralCode ? acc.referralCode.trim() : '',
                             regChannel: 'xt'
                         }
                     });
